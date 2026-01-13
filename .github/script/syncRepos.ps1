@@ -1,5 +1,7 @@
 # Change to GitHub directory
-Set-Location "C:\Users\bsuberri\OneDrive - NI\Documents\GitHub"
+
+$workingDir = "C:\Users\bsuberri\OneDrive - NI\Documents\GitHub"
+Set-Location $workingDir
 
 # Load user dictionary from JSON
 $userDictPath = Join-Path $PSScriptRoot 'users_dictionary.json'
@@ -7,11 +9,11 @@ $userDictionary = Get-Content -Path $userDictPath -Raw | ConvertFrom-Json
 
 # List of client repositories
 
-$unit = 'unit04-test01'
+$unit = 'maman02'
 $clientRepo = ''
 
 # $users = @(
-#             'eitanmizlish'
+#             'eyaleis'
 
 #         )
 
@@ -55,6 +57,7 @@ function Update-Repos {
         [string]$unit,
         [array]$users
     )
+
     
     # Iterate over each repository
     foreach ($user in $users) {
@@ -87,14 +90,107 @@ function Update-Repos {
 
         git merge teacher/main
 
-
+        # Rename HotelRoomTesterBy.java and update class name
+        Set-ClassNameByUser -className "HotelRoomUserTester" -user $user
+        Set-ClassNameByUser -className "HotelUserTester" -user $user
         
-
-
         git push
 
-
         Set-Location ".."
+    }
+    
+}
+
+function Update-MyRepos {
+    param (
+        [string]$unit,
+        [array]$users
+    )
+
+    Set-Location "$workingDir\baraksu-class-2026-classroom-01-$unit"
+
+    $remotes = git remote
+
+    # Iterate over each repository
+    foreach ($user in $users) {
+
+        $clientRepo = $unit + '-' + $user
+       
+        Write-Host "Processing repository: $clientRepo" -ForegroundColor Cyan
+
+        $originName = "student-$user"
+        
+        $repoUrl = "https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git"
+        $repoExists = git ls-remote $repoUrl 2>&1
+        
+        if ($LASTEXITCODE -ne 0) {
+            continue
+        }
+        
+        if ($remotes -notcontains $originName) {
+            git remote add $originName https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git
+        }
+
+        git fetch $originName main
+
+        foreach ($className in @("HotelUserTester", "HotelRoomUserTester")) {
+
+            $newClassName = Get-UserClassName -className $className  -user $user
+
+            # Check if file exists in remote branch before checkout
+            $fileExists = git ls-tree -r --name-only "$originName/main" "$newClassName.java" 2>&1
+            
+            if ($fileExists) {
+                git checkout "$originName/main" -- "$newClassName.java"
+                git add "$newClassName.java"
+                git commit -m "Sync $newClassName.java from $clientRepo"
+            } else {
+                Write-Host "  File $newClassName.java not found in $originName/main" -ForegroundColor Yellow
+            }
+
+        }
+        
+      #  git push
+        
+    }
+    
+}
+
+function Get-UserClassName {
+    param (
+        [string]$className,
+        [string]$user
+    )
+    
+    # Convert user to UpperCamelCase
+    $userCapitalized = $user.Substring(0,1).ToUpper() + $user.Substring(1)
+    $userCapitalized = $userCapitalized -replace '-', ''
+    
+    # Replace 'User' in className with userCapitalized
+    $newClassName = $className -replace 'User', $userCapitalized
+    
+    return $newClassName
+}
+
+function Set-ClassNameByUser {
+    param (
+        [string]$className,
+        [string]$user
+    )
+    
+    # Rename {className}.java to {className}-{user}.java and update class name
+    if (Test-Path "$className.java") {
+
+        # Get new class name
+        $newClassName = Get-UserClassName -className $className -user $user
+        
+        $content = Get-Content "$className.java" -Raw
+        $content = $content -replace "public class $className", "public class $newClassName"
+        Set-Content "$newClassName.java" -Value $content
+        Remove-Item "$className.java"
+        git add "$newClassName.java"
+        git add "$className.java"
+        git commit -m "Rename $className to $newClassName"
     }
 }
 
@@ -195,6 +291,8 @@ function Update-Secrets {
 
 
 # Call the function
+Update-Repos -unit $unit -users $users
+Update-MyRepos -unit $unit -users $users
 Update-Secrets -unit $unit -users $users
-#Update-Repos -unit $unit -users $users
 #Check-ReposDoesExist -unit $unit -users $users
+
