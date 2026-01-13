@@ -1,0 +1,22 @@
+name: Autograding Tests
+"on":
+  - workflow_dispatch
+  - repository_dispatch
+permissions:
+  checks: write
+  actions: write
+  contents: write
+  pull-requests: write
+  pages: write
+  id-token: write
+jobs:
+  call-maven-workflow:
+    uses: ./.github/workflows/maven.yml
+    secrets: inherit
+    permissions:
+      checks: write
+      actions: write
+      contents: write
+      pull-requests: write
+      pages: write
+      id-token: write

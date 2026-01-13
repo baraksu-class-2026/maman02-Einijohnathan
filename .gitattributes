@@ -1,0 +1,4 @@
+# Auto-generated badge files - always keep ours (current branch) during merge
+.github/badges/* merge=ours
+Readme.md merge=ours
+README.md merge=ours
