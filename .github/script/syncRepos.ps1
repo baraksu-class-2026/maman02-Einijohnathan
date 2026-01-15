@@ -35,7 +35,6 @@ $users = @(
     'kosloyair-cyber',
     'MatanH5',
     'Moshe-Halpern',
-    'muli122123',
     'naamankoosz-netizen',
     'nevo1218',
     'Noamizaksohn',
@@ -44,7 +43,6 @@ $users = @(
     'Sapir1913',
     'yehonatan-fisher',
     'yehonatan351-dev',
-    'Yonatansaghi',
     'yonathanklein2010-droid',
     'Yoavpan',
     'YotamOphir',
@@ -139,19 +137,19 @@ function Update-MyRepos {
         }
 
         # Check GitHub Actions status
-        $workflowStatus = gh run list -R baraksu-class-2026/$clientRepo --limit 1 --json conclusion --jq '.[0].conclusion' 2>&1
+        # $workflowStatus = gh run list -R baraksu-class-2026/$clientRepo --limit 1 --json conclusion --jq '.[0].conclusion' 2>&1
         
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "  Failed to check workflow status for $clientRepo" -ForegroundColor Red
-            continue
-        }
+        # if ($LASTEXITCODE -ne 0) {
+        #     Write-Host "  Failed to check workflow status for $clientRepo" -ForegroundColor Red
+        #     continue
+        # }
 
-        if ($workflowStatus -ne "success") {
-            Write-Host "  Last workflow run for $clientRepo is not successful (status: $workflowStatus). Skipping." -ForegroundColor Yellow
-            continue
-        }
+        # if ($workflowStatus -ne "success") {
+        #     Write-Host "  Last workflow run for $clientRepo is not successful (status: $workflowStatus). Skipping." -ForegroundColor Yellow
+        #     continue
+        # }
 
-        Write-Host "  Last workflow run passed. Proceeding..." -ForegroundColor Green
+        # Write-Host "  Last workflow run passed. Proceeding..." -ForegroundColor Green
 
         foreach ($className in @("HotelUserTester", "HotelRoomUserTester")) {
 
@@ -309,10 +307,48 @@ function Update-Secrets {
     }
 }
 
+function Create-LocalTestrs {
+    param (
+        [string]$unit,
+        [array]$users
+    )
+
+    Set-Location "$workingDir\baraksu-class-2026-classroom-01-$unit"
+
+    
+
+    # Iterate over each repository
+    foreach ($user in $users) {
+
+    
+        foreach ($className in @("HotelUserTester", "HotelRoomUserTester")) {
+
+            $newClassName = Get-UserClassName -className $className  -user $user
+            
+            # Create file if it doesn't exist
+            if (-not (Test-Path "$newClassName.java")) {
+                
+                # Check if template file exists
+                if (Test-Path "$className.java") {
+                    $content = Get-Content "$className.java" -Raw
+                    $content = $content -replace "public class $className", "public class $newClassName"
+                    Set-Content "$newClassName.java" -Value $content
+                    Write-Host "Created $newClassName.java for $user" -ForegroundColor Green
+                } else {
+                    Write-Host "Template file $className.java not found" -ForegroundColor Yellow
+                }
+            }
+        }
+        
+      #  git push
+        
+    }
+    
+}
 
 # Call the function
-Update-Repos -unit $unit -users $users
+# Update-Repos -unit $unit -users $users
 Update-MyRepos -unit $unit -users $users
-Update-Secrets -unit $unit -users $users
+#Update-Secrets -unit $unit -users $users
 #Check-ReposDoesExist -unit $unit -users $users
-
+# Create-LocalTestrs -unit $unit -users $users
