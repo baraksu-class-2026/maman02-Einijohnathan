@@ -1,15 +1,14 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/dX_dCpff)
 ## Grade
 
-[![Grade](https://img.shields.io/badge/Grade-0%25-red)](https://github.com/baraksu-class-2026/baraksu-class-2026-classroom-01-maman02/actions/runs/21004496533)
+[![Grade](https://img.shields.io/badge/Grade-0%25-red)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21025470636)
 
 ## Coding Standards
 
-❌ **Coding Standard Failed (-25 points)** - [View Checkstyle Report](https://github.com/baraksu-class-2026/baraksu-class-2026-classroom-01-maman02/actions/runs/21004496533)
+❌ **Coding Standard Failed (-25 points)** - [View Checkstyle Report](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21025470636)
 
 ## Tests
 
-[📊 View Test Reports](https://github.com/baraksu-class-2026/baraksu-class-2026-classroom-01-maman02/actions/runs/21004496533)
+[📊 View Test Reports](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21025470636)
 
 ## AI Code Review
 
