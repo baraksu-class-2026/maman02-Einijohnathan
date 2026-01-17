@@ -13,7 +13,7 @@ $unit = 'maman02'
 $clientRepo = ''
 
 # $users = @(
-#             'eyaleis'
+#             'dvirshg'
 
 #         )
 
@@ -88,10 +88,6 @@ function Update-Repos {
 
         git merge teacher/main
 
-        # Rename HotelRoomTesterBy.java and update class name
-        Set-ClassNameByUser -className "HotelRoomUserTester" -user $user
-        Set-ClassNameByUser -className "HotelUserTester" -user $user
-        
         git push
 
         Set-Location ".."
@@ -248,6 +244,8 @@ function Update-Secrets {
         [array]$users
     )
 
+    Set-Location $workingDir
+
     # API key value from environment variable
     $apiKey = $env:OPENAI_API_KEY
                 
@@ -346,9 +344,126 @@ function Create-LocalTestrs {
     
 }
 
+function Get-LastWorkingUsers {
+    param (
+        [string]$unit,
+        [array]$users,
+        [int]$n = 1
+    )
+    
+    Write-Host "Checking last commit activity for $unit repositories..." -ForegroundColor Cyan
+    
+    $userCommits = @()
+    
+    # Iterate over each repository
+    foreach ($user in $users) {
+
+        $clientRepo = $unit + '-' + $user
+        
+        # Check if repository exists on GitHub server
+        $repoUrl = "https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git"
+        $repoExists = git ls-remote $repoUrl 2>&1
+        
+        if ($LASTEXITCODE -eq 0) {
+            # Repository exists, get last commit info
+            $lastCommitDate = git ls-remote --heads $repoUrl main 2>&1 | Out-Null
+            
+            if ($LASTEXITCODE -eq 0) {
+                # Use git log to get last commit date by this user
+                try {
+                    # Use the repository in working directory
+                    $repoPath = Join-Path $workingDir $clientRepo
+                    
+                    if (-not (Test-Path $repoPath)) {
+                        git clone "https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git" $repoPath 2>&1 | Out-Null
+                    } else {
+                        Push-Location $repoPath
+                        git pull 2>&1 | Out-Null
+                        Pop-Location
+                    }
+                    
+                    if (Test-Path $repoPath) {
+                        Push-Location $repoPath
+                        
+                        # Get last commit by this user using git log
+                        $gitLog = git log --author="$user" --format="%H|%aI|%s" -n 1 2>&1
+                        
+                        if ($LASTEXITCODE -eq 0 -and $gitLog) {
+                            $parts = $gitLog -split '\|'
+                            if ($parts.Count -eq 3) {
+                                $commitDate = [DateTime]::Parse($parts[1])
+                                $commitMessage = $parts[2]
+                                
+                                $userCommits += [PSCustomObject]@{
+                                    User = $user
+                                    Date = $commitDate
+                                    Message = $commitMessage
+                                    Repo = $clientRepo
+                                }
+                            }
+                        }
+                        
+                        Pop-Location
+                    }
+                } catch {
+                    Write-Host "  Failed to get commit info for $user" -ForegroundColor Yellow
+                    Write-Host "    Error: $($_.Exception.Message)" -ForegroundColor Red
+                }
+            }
+        }
+    }
+    
+    # Sort by date and display
+    if ($userCommits.Count -gt 0) {
+        Write-Host "`n Users sorted by last commit date:" -ForegroundColor Green
+        $userCommits | Sort-Object -Property Date -Descending | ForEach-Object {
+            $userName = $userDictionary."@$($_.User)"
+            if ($userName) {
+                $reversedName = -join $userName[-1..-$userName.Length]
+                $displayName = $reversedName
+            } else {
+                $displayName = "@$($_.User)"
+            }
+            
+            $timeAgo = (Get-Date) - $_.Date
+            $timeString = if ($timeAgo.TotalDays -gt 1) {
+                "$([int]$timeAgo.TotalDays) days ago"
+            } elseif ($timeAgo.TotalHours -gt 1) {
+                "$([int]$timeAgo.TotalHours) hours ago"
+            } else {
+                "$([int]$timeAgo.TotalMinutes) minutes ago"
+            }
+            
+            Write-Host "  $displayName - $($_.Date.ToString('yyyy-MM-dd HH:mm')) ($timeString)" -ForegroundColor Cyan
+            Write-Host "    $($_.Message)" -ForegroundColor Gray
+        }
+        
+        $topN = if ($n -eq 1) { "Most recent commit by:" } else { "Top $n most recent commits by:" }
+        Write-Host "`n$topN" -ForegroundColor Green
+        $topUsers = $userCommits | Sort-Object -Property Date -Descending | Select-Object -First $n
+        
+        foreach ($latest in $topUsers) {
+            $userName = $userDictionary."@$($latest.User)"
+            if ($userName) {
+                $reversedName = -join $userName[-1..-$userName.Length]
+                Write-Host "  $reversedName (@$($latest.User))" -ForegroundColor Yellow
+            } else {
+                Write-Host "  @$($latest.User)" -ForegroundColor Yellow
+            }
+            Write-Host "    Date: $($latest.Date.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Yellow
+            Write-Host "    Message: $($latest.Message)" -ForegroundColor Yellow
+            write-Host "    Repository: $($latest.Repo)" -ForegroundColor Yellow
+            Write-Host "" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "No commit information found for any user." -ForegroundColor Red
+    }
+}
+
 # Call the function
-# Update-Repos -unit $unit -users $users
+ #Update-Repos -unit $unit -users $users
 Update-MyRepos -unit $unit -users $users
-#Update-Secrets -unit $unit -users $users
+Update-Secrets -unit $unit -users $users
 #Check-ReposDoesExist -unit $unit -users $users
 # Create-LocalTestrs -unit $unit -users $users
+#Get-LastWorkingUsers -unit $unit -users $users -n 15
