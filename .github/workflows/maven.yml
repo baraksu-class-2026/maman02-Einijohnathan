@@ -16,6 +16,7 @@ permissions:
 jobs:
   run-autograding-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 1.5
     if: github.actor != 'github-classroom[bot]' && (github.event_name != 'push' || github.event.pull_request == null)
     steps:
       - name: Checkout code
@@ -69,7 +70,7 @@ jobs:
           GITHUB_SHA: ${{ steps.get_sha.outputs.sha }}
 
       - name: Build with Maven
-        if: always()
+        if: steps.reviewdog.outcome == 'success'
         run: mvn -B package --file pom.xml -Dcheckstyle.skip=true
       - name: Calculate Grade
         if: always()
