@@ -156,8 +156,7 @@ public class HotelRoomArielMeyer1Tester {
     @Test
     public void equals4() {
         HotelRoom room1 = new HotelRoom(912, 2);
-        HotelRoom room2 = new HotelRoom(912, 4);
-        assertFalse(room1.equals(room2));
+        assertFalse(room1.equals(null));
     }
     
     @Test
