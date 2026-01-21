@@ -7,6 +7,9 @@ import org.junit.jupiter.api.Test;
 
 public class HotelRoomYonathanklein2010droidTester {
 
+    private static final int DEFAULT_ROOM_NUM = 999;
+    private static final int DEFAULT_NUM_BEDS = 2;
+
     /* ========= Constructor & getters ========= */
     @Test
     public void testConstructorValidValues() {
@@ -19,25 +22,25 @@ public class HotelRoomYonathanklein2010droidTester {
     @Test
     public void testConstructorInvalidRoomNumLow() {
         HotelRoom r = new HotelRoom(50, 3);
-        assertEquals(HotelRoom.DEFAULT_ROOM_NUM, r.getRoomNum());
+        assertEquals(DEFAULT_ROOM_NUM, r.getRoomNum());
     }
 
     @Test
     public void testConstructorInvalidRoomNumHigh() {
         HotelRoom r = new HotelRoom(2000, 3);
-        assertEquals(HotelRoom.DEFAULT_ROOM_NUM, r.getRoomNum());
+        assertEquals(DEFAULT_ROOM_NUM, r.getRoomNum());
     }
 
     @Test
     public void testConstructorInvalidBedsLow() {
         HotelRoom r = new HotelRoom(300, 1);
-        assertEquals(HotelRoom.DEFAULT_NUM_BEDS, r.getNumBeds());
+        assertEquals(DEFAULT_NUM_BEDS, r.getNumBeds());
     }
 
     @Test
     public void testConstructorInvalidBedsHigh() {
         HotelRoom r = new HotelRoom(300, 6);
-        assertEquals(HotelRoom.DEFAULT_NUM_BEDS, r.getNumBeds());
+        assertEquals(DEFAULT_NUM_BEDS, r.getNumBeds());
     }
 
     /* ========= checkIn ========= */

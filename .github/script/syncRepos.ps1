@@ -7,6 +7,9 @@ Set-Location $workingDir
 $userDictPath = Join-Path $PSScriptRoot 'users_dictionary.json'
 $userDictionary = Get-Content -Path $userDictPath -Raw | ConvertFrom-Json
 
+# Classroom GitHub URL
+$classroomUrl = "https://baraksu-teacher@github.com/baraksu-class-2026"
+
 # List of client repositories
 
 $unit = 'maman02'
@@ -20,7 +23,6 @@ $clientRepo = ''
 $users = @(
     'baraksu-teacher',
     'ArielMeyer1',
-    'arielsperetz-web',
     'Daniel-Behar-blip',
     'dvirshg',
     'Einijohnathan',
@@ -66,7 +68,7 @@ function Update-Repos {
         
         if (-not (Test-Path $clientRepo)) {
             
-            git clone  https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git
+            git clone  $classroomUrl/$clientRepo.git
             
             if (-not (Test-Path $clientRepo)) {
                 continue
@@ -81,7 +83,7 @@ function Update-Repos {
         $remotes = git remote
         
         if ($remotes -notcontains 'teacher') {
-            git remote add teacher https://baraksu-teacher@github.com/baraksu-class-2026/baraksu-class-2026-classroom-01-$unit
+            git remote add teacher $classroomUrl/baraksu-class-2026-classroom-01-$unit
         }
 
         git fetch teacher main
@@ -114,7 +116,7 @@ function Update-MyRepos {
 
         $originName = "student-$user"
         
-        $repoUrl = "https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git"
+        $repoUrl = "$classroomUrl/$clientRepo.git"
         $repoExists = git ls-remote $repoUrl 2>&1
         
         if ($LASTEXITCODE -ne 0) {
@@ -122,7 +124,7 @@ function Update-MyRepos {
         }
         
         if ($remotes -notcontains $originName) {
-            git remote add $originName https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git
+            git remote add $originName $classroomUrl/$clientRepo.git
         }
 
         git fetch $originName main
@@ -222,7 +224,7 @@ function Check-ReposDoesExist {
         $clientRepo = $unit + '-' + $user
         
         # Check if repository exists on GitHub server
-        $repoUrl = "https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git"
+        $repoUrl = "$classroomUrl/$clientRepo.git"
         $repoExists = git ls-remote $repoUrl 2>&1
         
         if ($LASTEXITCODE -ne 0) {
@@ -266,7 +268,7 @@ function Update-Secrets {
         
         if (-not (Test-Path $clientRepo)) {
             
-            git clone  https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git
+            git clone  $classroomUrl/$clientRepo.git
             
             if (-not (Test-Path $clientRepo)) {
                 continue
@@ -348,84 +350,88 @@ function Get-LastWorkingUsers {
     param (
         [string]$unit,
         [array]$users,
-        [int]$n = 1
+        [int]$n = 1,
+        [switch]$Descending
     )
     
     Write-Host "Checking last commit activity for $unit repositories..." -ForegroundColor Cyan
     
-    $userCommits = @()
-    
-    # Iterate over each repository
-    foreach ($user in $users) {
-
-        $clientRepo = $unit + '-' + $user
+    # Use parallel processing for better performance
+    $userCommits = $users | ForEach-Object -ThrottleLimit 5 -Parallel {
+        $user = $_
+        $clientRepo = $using:unit + '-' + $user
+        $workingDir = $using:workingDir
+        $classroomUrl = $using:classroomUrl
         
         # Check if repository exists on GitHub server
-        $repoUrl = "https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git"
+        $repoUrl = "$classroomUrl/$clientRepo.git"
         $repoExists = git ls-remote $repoUrl 2>&1
         
         if ($LASTEXITCODE -eq 0) {
-            # Repository exists, get last commit info
-            $lastCommitDate = git ls-remote --heads $repoUrl main 2>&1 | Out-Null
-            
-            if ($LASTEXITCODE -eq 0) {
-                # Use git log to get last commit date by this user
-                try {
-                    # Use the repository in working directory
-                    $repoPath = Join-Path $workingDir $clientRepo
+            try {
+                # Use the repository in working directory
+                $repoPath = Join-Path $workingDir $clientRepo
+                
+                if (-not (Test-Path $repoPath)) {
+                    git clone --quiet "$classroomUrl/$clientRepo.git" $repoPath 2>&1 | Out-Null
+                } else {
+                    Push-Location $repoPath
+                    git pull --quiet 2>&1 | Out-Null
+                    Pop-Location
+                }
+                
+                if (Test-Path $repoPath) {
+                    Push-Location $repoPath
                     
-                    if (-not (Test-Path $repoPath)) {
-                        git clone "https://baraksu-teacher@github.com/baraksu-class-2026/$clientRepo.git" $repoPath 2>&1 | Out-Null
-                    } else {
-                        Push-Location $repoPath
-                        git pull 2>&1 | Out-Null
-                        Pop-Location
-                    }
+                    # Get last commit by this user using git log
+                    $gitLog = git log --author="$user" --format="%H|%aI|%s" -n 1 2>&1
                     
-                    if (Test-Path $repoPath) {
-                        Push-Location $repoPath
-                        
-                        # Get last commit by this user using git log
-                        $gitLog = git log --author="$user" --format="%H|%aI|%s" -n 1 2>&1
-                        
-                        if ($LASTEXITCODE -eq 0 -and $gitLog) {
-                            $parts = $gitLog -split '\|'
-                            if ($parts.Count -eq 3) {
-                                $commitDate = [DateTime]::Parse($parts[1])
-                                $commitMessage = $parts[2]
-                                
-                                $userCommits += [PSCustomObject]@{
-                                    User = $user
-                                    Date = $commitDate
-                                    Message = $commitMessage
-                                    Repo = $clientRepo
-                                }
+                    if ($LASTEXITCODE -eq 0 -and $gitLog) {
+                        $parts = $gitLog -split '\|'
+                        if ($parts.Count -eq 3) {
+                            $commitDate = [DateTime]::Parse($parts[1])
+                            $commitMessage = $parts[2]
+                            
+                            Pop-Location
+                            
+                            return [PSCustomObject]@{
+                                User = $user
+                                Date = $commitDate
+                                Message = $commitMessage
+                                Repo = $clientRepo
                             }
                         }
-                        
-                        Pop-Location
                     }
-                } catch {
-                    Write-Host "  Failed to get commit info for $user" -ForegroundColor Yellow
-                    Write-Host "    Error: $($_.Exception.Message)" -ForegroundColor Red
+                    
+                    Pop-Location
                 }
+            } catch {
+                Write-Error "Failed to get commit info for $user : $($_.Exception.Message)"
             }
         }
     }
     
     # Sort by date and display
     if ($userCommits.Count -gt 0) {
-        Write-Host "`n Users sorted by last commit date:" -ForegroundColor Green
-        $userCommits | Sort-Object -Property Date -Descending | ForEach-Object {
-            $userName = $userDictionary."@$($_.User)"
+        $topN = if ($n -eq 1) { "Most recent commit by:" } else { "Top $n most recent commits by:" }
+        Write-Host "`n$topN" -ForegroundColor Green
+        
+        $topCommits = if ($Descending) {
+            $userCommits | Sort-Object -Property Date -Descending | Select-Object -First $n
+        } else {
+            $userCommits | Sort-Object -Property Date | Select-Object -First $n
+        }
+        
+        foreach ($commit in $topCommits) {
+            $userName = $userDictionary."@$($commit.User)"
             if ($userName) {
                 $reversedName = -join $userName[-1..-$userName.Length]
                 $displayName = $reversedName
             } else {
-                $displayName = "@$($_.User)"
+                $displayName = "@$($commit.User)"
             }
             
-            $timeAgo = (Get-Date) - $_.Date
+            $timeAgo = (Get-Date) - $commit.Date
             $timeString = if ($timeAgo.TotalDays -gt 1) {
                 "$([int]$timeAgo.TotalDays) days ago"
             } elseif ($timeAgo.TotalHours -gt 1) {
@@ -434,25 +440,12 @@ function Get-LastWorkingUsers {
                 "$([int]$timeAgo.TotalMinutes) minutes ago"
             }
             
-            Write-Host "  $displayName - $($_.Date.ToString('yyyy-MM-dd HH:mm')) ($timeString)" -ForegroundColor Cyan
-            Write-Host "    $($_.Message)" -ForegroundColor Gray
-        }
-        
-        $topN = if ($n -eq 1) { "Most recent commit by:" } else { "Top $n most recent commits by:" }
-        Write-Host "`n$topN" -ForegroundColor Green
-        $topUsers = $userCommits | Sort-Object -Property Date -Descending | Select-Object -First $n
-        
-        foreach ($latest in $topUsers) {
-            $userName = $userDictionary."@$($latest.User)"
-            if ($userName) {
-                $reversedName = -join $userName[-1..-$userName.Length]
-                Write-Host "  $reversedName (@$($latest.User))" -ForegroundColor Yellow
-            } else {
-                Write-Host "  @$($latest.User)" -ForegroundColor Yellow
-            }
-            Write-Host "    Date: $($latest.Date.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Yellow
-            Write-Host "    Message: $($latest.Message)" -ForegroundColor Yellow
-            write-Host "    Repository: $($latest.Repo)" -ForegroundColor Yellow
+            Write-Host "  $displayName - $($commit.Date.ToString('yyyy-MM-dd HH:mm')) ($timeString)" -ForegroundColor Cyan
+            Write-Host "    $($commit.Message)" -ForegroundColor Gray
+            Write-Host "  $displayName (@$($commit.User))" -ForegroundColor Yellow
+            Write-Host "    Date: $($commit.Date.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Yellow
+            Write-Host "    Message: $($commit.Message)" -ForegroundColor Yellow
+            Write-Host "    Repository: https://github.com/baraksu-class-2026/$($commit.Repo)" -ForegroundColor Yellow
             Write-Host "" -ForegroundColor Yellow
         }
     } else {
@@ -461,9 +454,9 @@ function Get-LastWorkingUsers {
 }
 
 # Call the function
- #Update-Repos -unit $unit -users $users
-Update-MyRepos -unit $unit -users $users
-Update-Secrets -unit $unit -users $users
-#Check-ReposDoesExist -unit $unit -users $users
+# Update-Repos -unit $unit -users $users
+# Update-MyRepos -unit $unit -users $users
+# Update-Secrets -unit $unit -users $users
+# Check-ReposDoesExist -unit $unit -users $users
 # Create-LocalTestrs -unit $unit -users $users
-#Get-LastWorkingUsers -unit $unit -users $users -n 15
+Get-LastWorkingUsers -unit $unit -users $users -n 10 
