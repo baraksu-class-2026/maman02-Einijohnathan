@@ -1,26 +1,20 @@
 # Change to GitHub directory
 
-$workingDir = "C:\Users\bsuberri\OneDrive - NI\Documents\GitHub"
-Set-Location $workingDir
-
-# Load user dictionary from JSON
-$userDictPath = Join-Path $PSScriptRoot 'users_dictionary.json'
-$userDictionary = Get-Content -Path $userDictPath -Raw | ConvertFrom-Json
-
-# Classroom GitHub URL
-$classroomUrl = "https://baraksu-teacher@github.com/baraksu-class-2026"
+$script:workingDir = "C:\Users\bsuberri\OneDrive - NI\Documents\GitHub"
+$script:userDictPath = Join-Path $PSScriptRoot 'users_dictionary.json'
+$script:userDictionary = Get-Content -Path $script:userDictPath -Raw | ConvertFrom-Json
+$script:classroomUrl = "https://baraksu-teacher@github.com/baraksu-class-2026"
 
 # List of client repositories
+$script:unit = 'maman02'
+$script:clientRepo = ''
 
-$unit = 'maman02'
-$clientRepo = ''
-
-# $users = @(
+# $script:users = @(
 #             'dvirshg'
 
 #         )
 
-$users = @(
+$script:users = @(
     'baraksu-teacher',
     'ArielMeyer1',
     'Daniel-Behar-blip',
@@ -483,9 +477,38 @@ function Print-LastGrade {
             } else {
                 $displayName = "@$user"
             }
+            Write-Host "`n$displayName (@$user)" -ForegroundColor Cyan
             $gradeContent = Get-Content $gradeBadgePath -Raw
-            Write-Host "Grade $displayName, $classroomUrl/$clientRepo " -ForegroundColor Cyan
-            Write-Host $gradeContent -ForegroundColor Green
+            
+            # Extract and parse the badge image URL
+            if ($gradeContent -match '!\[.*?\]\((https://img\.shields\.io/badge/([^-]+)-([^-]+)-([^\)]+))\)') {
+                $badgeImageUrl = $matches[1]
+                $label = $matches[2]
+                $value = $matches[3] -replace '%25', '%'
+                $color = $matches[4]
+                
+                # Map shield.io colors to PowerShell colors
+                $psColor = switch -Regex ($color) {
+                    'brightgreen|success|green' { 'Green' }
+                    'yellow|warning' { 'Yellow' }
+                    'red|critical|important' { 'Red' }
+                    'blue|informational' { 'Cyan' }
+                    'orange' { 'DarkYellow' }
+                    default { 'White' }
+                }
+                
+                Write-Host "  ╔════════════════════════════════╗" -ForegroundColor DarkGray
+                Write-Host "  ║ " -NoNewline -ForegroundColor DarkGray
+                Write-Host "$label" -NoNewline -ForegroundColor White
+                Write-Host ": " -NoNewline -ForegroundColor DarkGray
+                Write-Host "$value" -NoNewline -ForegroundColor $psColor
+                Write-Host (" " * (27 - $label.Length - $value.Length)) -NoNewline
+                Write-Host "║" -ForegroundColor DarkGray
+                Write-Host "  ╚════════════════════════════════╝" -ForegroundColor DarkGray
+                Write-Host "  Repository: $classroomUrl/$clientRepo " -ForegroundColor DarkGray
+            } else {
+                Write-Host $gradeContent -ForegroundColor Green
+            }
         }
         
         Set-Location ".."
@@ -494,11 +517,13 @@ function Print-LastGrade {
     }
 }
 
-# Call the function
-# Update-Repos -unit $unit -users $users
-# Update-MyRepos -unit $unit -users $users
-# Update-Secrets -unit $unit -users $users
-# Check-ReposDoesExist -unit $unit -users $users
-# Create-LocalTestrs -unit $unit -users $users
-# Get-LastWorkingUsers -unit $unit -users $users -n 10 -Descending
-# Print-LastGrade  -unit $unit -users $users 
+# When imported as a module, all functions are automatically exported
+# Call the function when script is run directly (not imported as module)
+# Uncomment the function you want to run:
+# Update-Repos -unit $script:unit -users $script:users
+# Update-MyRepos -unit $script:unit -users $script:users
+# Update-Secrets -unit $script:unit -users $script:users
+# Check-ReposDoesExist -unit $script:unit -users $script:users
+# Create-LocalTestrs -unit $script:unit -users $script:users
+# Get-LastWorkingUsers -unit $script:unit -users $script:users -n 10 -Descending
+# Print-LastGrade -unit $script:unit -users $script:users
