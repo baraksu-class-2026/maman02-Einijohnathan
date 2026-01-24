@@ -6,11 +6,11 @@ $script:userDictionary = Get-Content -Path $script:userDictPath -Raw | ConvertFr
 $script:classroomUrl = "https://baraksu-teacher@github.com/baraksu-class-2026"
 
 # List of client repositories
-$script:unit = 'maman02'
+$script:unit = 'unit04-test01'
 $script:clientRepo = ''
 
 # $script:users = @(
-#             'dvirshg'
+#             'Daniel-Behar-blip'
 
 #         )
 
@@ -47,22 +47,19 @@ $script:users = @(
 )
 
 function Update-Repos {
-    param (
-        [string]$unit,
-        [array]$users
-    )
 
+    Set-Location $script:workingDir
     
     # Iterate over each repository
-    foreach ($user in $users) {
+    foreach ($user in $script:users) {
 
         Write-Host "Processing repository: $clientRepo" -ForegroundColor Cyan
 
-        $clientRepo = $unit + '-' + $user
+        $clientRepo = $script:unit + '-' + $user
         
         if (-not (Test-Path $clientRepo)) {
             
-            git clone  $classroomUrl/$clientRepo.git
+            git clone  $script:classroomUrl/$clientRepo.git
             
             if (-not (Test-Path $clientRepo)) {
                 continue
@@ -72,24 +69,32 @@ function Update-Repos {
 
         Set-Location $clientRepo
 
+        git reset --hard HEAD 2>&1 | Out-Null
+
         git pull
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  Merge conflict detected, aborting merge" -ForegroundColor Yellow
+
+            git rm Readme.md 
+
+            git add README.md
+        
+            git commit -m "Rename Readme.md to README.md"
+
+            git push
+
+        }
 
         $remotes = git remote
         
         if ($remotes -notcontains 'teacher') {
-            git remote add teacher $classroomUrl/baraksu-class-2026-classroom-01-$unit
+            git remote add teacher $script:classroomUrl/baraksu-class-2026-classroom-01-$script:unit
         }
 
         git fetch teacher main
 
         git merge teacher/main
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "  Failed to merge teacher/main into $clientRepo" -ForegroundColor Red
-            Write-Host "  There may be merge conflicts that need to be resolved manually" -ForegroundColor Yellow
-            Set-Location ".."
-            continue
-        }
 
         git push
 
@@ -99,25 +104,21 @@ function Update-Repos {
 }
 
 function Update-MyRepos {
-    param (
-        [string]$unit,
-        [array]$users
-    )
 
-    Set-Location "$workingDir\baraksu-class-2026-classroom-01-$unit"
+    Set-Location "$script:workingDir\baraksu-class-2026-classroom-01-$script:unit"
 
     $remotes = git remote
 
     # Iterate over each repository
-    foreach ($user in $users) {
+    foreach ($user in $script:users) {
 
-        $clientRepo = $unit + '-' + $user
+        $clientRepo = $script:unit + '-' + $user
        
         Write-Host "Processing repository: $clientRepo" -ForegroundColor Cyan
 
         $originName = "student-$user"
         
-        $repoUrl = "$classroomUrl/$clientRepo.git"
+        $repoUrl = "$script:classroomUrl/$clientRepo.git"
         $repoExists = git ls-remote $repoUrl 2>&1
         
         if ($LASTEXITCODE -ne 0) {
@@ -125,7 +126,7 @@ function Update-MyRepos {
         }
         
         if ($remotes -notcontains $originName) {
-            git remote add $originName $classroomUrl/$clientRepo.git
+            git remote add $originName $script:classroomUrl/$clientRepo.git
         }
 
         git fetch $originName main
@@ -197,24 +198,22 @@ function Set-ClassNameByUser {
 }
 
 function Check-ReposDoesExist {
-    param (
-        [string]$unit,
-        [array]$users
-    )
     
-    Write-Host "The following users haven't started task $unit" -ForegroundColor Yellow
+    Set-Location $script:workingDir
+
+    Write-Host "The following users haven't started task $script:unit" -ForegroundColor Yellow
     
     # Iterate over each repository
-    foreach ($user in $users) {
+    foreach ($user in $script:users) {
 
-        $clientRepo = $unit + '-' + $user
+        $clientRepo = $script:unit + '-' + $user
         
         # Check if repository exists on GitHub server
-        $repoUrl = "$classroomUrl/$clientRepo.git"
+        $repoUrl = "$script:classroomUrl/$clientRepo.git"
         $repoExists = git ls-remote $repoUrl 2>&1
         
         if ($LASTEXITCODE -ne 0) {
-            $userName = $userDictionary."@$user"
+            $userName = $script:userDictionary."@$user"
             if ($userName) {
                 $reversedName = -join $userName[-1..-$userName.Length]
                 Write-Host "$reversedName" -ForegroundColor Red
@@ -227,12 +226,8 @@ function Check-ReposDoesExist {
 
 
 function Update-Secrets {
-    param (
-        [string]$unit,
-        [array]$users
-    )
 
-    Set-Location $workingDir
+    Set-Location $script:workingDir
 
     # API key value from environment variable
     $apiKey = $env:OPENAI_API_KEY
@@ -246,15 +241,15 @@ function Update-Secrets {
                 
     
     # Iterate over each repository
-    foreach ($user in $users) {
+    foreach ($user in $script:users) {
 
         Write-Host "Processing repository: $clientRepo" -ForegroundColor Cyan
 
-        $clientRepo = $unit + '-' + $user
+        $clientRepo = $script:unit + '-' + $user
         
         if (-not (Test-Path $clientRepo)) {
             
-            git clone  $classroomUrl/$clientRepo.git
+            git clone  $script:classroomUrl/$clientRepo.git
             
             if (-not (Test-Path $clientRepo)) {
                 continue
@@ -294,17 +289,11 @@ function Update-Secrets {
 }
 
 function Create-LocalTestrs {
-    param (
-        [string]$unit,
-        [array]$users
-    )
 
-    Set-Location "$workingDir\baraksu-class-2026-classroom-01-$unit"
-
-    
+    Set-Location "$script:workingDir\baraksu-class-2026-classroom-01-$script:unit"
 
     # Iterate over each repository
-    foreach ($user in $users) {
+    foreach ($user in $script:users) {
 
     
         foreach ($className in @("HotelUserTester", "HotelRoomUserTester")) {
@@ -334,20 +323,21 @@ function Create-LocalTestrs {
 
 function Get-LastWorkingUsers {
     param (
-        [string]$unit,
-        [array]$users,
         [int]$n = 1,
         [switch]$Descending
     )
     
-    Write-Host "Checking last commit activity for $unit repositories..." -ForegroundColor Cyan
+    Write-Host "Checking last commit activity for $script:unit repositories..." -ForegroundColor Cyan
+
+    Set-Location $script:workingDir
     
     # Use parallel processing for better performance
-    $userCommits = $users | ForEach-Object -ThrottleLimit 5 -Parallel {
+    $userCommits = $script:users | ForEach-Object -ThrottleLimit 5 -Parallel {
         $user = $_
-        $clientRepo = $using:unit + '-' + $user
-        $workingDir = $using:workingDir
-        $classroomUrl = $using:classroomUrl
+        $unit = $using:script:unit
+        $clientRepo = $unit + '-' + $user
+        $workingDir = $using:script:workingDir
+        $classroomUrl = $using:script:classroomUrl
         
         # Check if repository exists on GitHub server
         $repoUrl = "$classroomUrl/$clientRepo.git"
@@ -362,6 +352,9 @@ function Get-LastWorkingUsers {
                     git clone --quiet "$classroomUrl/$clientRepo.git" $repoPath 2>&1 | Out-Null
                 } else {
                     Push-Location $repoPath
+                    # Discard any local changes to allow clean pull
+                    git reset --hard HEAD 2>&1 | Out-Null
+                    git config merge.ours.driver true 2>&1 | Out-Null
                     git pull --quiet 2>&1 | Out-Null
                     Pop-Location
                 }
@@ -409,7 +402,7 @@ function Get-LastWorkingUsers {
         }
         
         foreach ($commit in $topCommits) {
-            $userName = $userDictionary."@$($commit.User)"
+            $userName = $script:userDictionary."@$($commit.User)"
             if ($userName) {
                 $reversedName = -join $userName[-1..-$userName.Length]
                 $displayName = $reversedName
@@ -440,22 +433,18 @@ function Get-LastWorkingUsers {
 }
 
 function Print-LastGrade {
-    param (
-        [string]$unit,
-        [array]$users
-    )
 
-    Set-Location $workingDir
+    Set-Location $script:workingDir
     # Iterate over each repository
-    foreach ($user in $users) {
+    foreach ($user in $script:users) {
 
         Write-Host "Processing repository: $clientRepo" -ForegroundColor Cyan
 
-        $clientRepo = $unit + '-' + $user
+        $clientRepo = $script:unit + '-' + $user
         
         if (-not (Test-Path $clientRepo)) {
             
-            git clone --quiet $classroomUrl/$clientRepo.git 2>&1 | Out-Null
+            git clone --quiet $script:classroomUrl/$clientRepo.git 2>&1 | Out-Null
             
             if (-not (Test-Path $clientRepo)) {
                 continue
@@ -465,12 +454,19 @@ function Print-LastGrade {
 
         Set-Location $clientRepo
 
+
+        # Discard any local changes to allow clean pull
+        git reset --hard HEAD 2>&1 | Out-Null
+        
+        # Configure git to use 'ours' merge driver (keep local version)
+        git config merge.ours.driver true 2>&1 | Out-Null
+
         git pull --quiet 2>&1 | Out-Null
 
         # Print grade badge content if exists
         $gradeBadgePath = ".github\badges\grade.md"
         if (Test-Path $gradeBadgePath) {
-            $userName = $userDictionary."@$($user)"
+            $userName = $script:userDictionary."@$($user)"
             if ($userName) {
                 $reversedName = -join $userName[-1..-$userName.Length]
                 $displayName = $reversedName
@@ -505,7 +501,7 @@ function Print-LastGrade {
                 Write-Host (" " * (27 - $label.Length - $value.Length)) -NoNewline
                 Write-Host "║" -ForegroundColor DarkGray
                 Write-Host "  ╚════════════════════════════════╝" -ForegroundColor DarkGray
-                Write-Host "  Repository: $classroomUrl/$clientRepo " -ForegroundColor DarkGray
+                Write-Host "  Repository: $script:classroomUrl/$clientRepo " -ForegroundColor DarkGray
             } else {
                 Write-Host $gradeContent -ForegroundColor Green
             }
@@ -517,13 +513,115 @@ function Print-LastGrade {
     }
 }
 
+function Get-UserCommitCount {
+    param (
+        [string]$user
+    )
+    
+    Set-Location $script:workingDir
+    
+    $clientRepo = $script:unit + '-' + $user
+    
+    # Check if repository exists on GitHub server
+    $repoUrl = "$script:classroomUrl/$clientRepo.git"
+    $repoExists = git ls-remote $repoUrl 2>&1
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Repository $clientRepo does not exist on GitHub" -ForegroundColor Red
+        return
+    }
+    
+    # Use the repository in working directory
+    $repoPath = Join-Path $script:workingDir $clientRepo
+    
+    if (-not (Test-Path $repoPath)) {
+        Write-Host "Cloning $clientRepo..." -ForegroundColor Cyan
+        git clone --quiet "$script:classroomUrl/$clientRepo.git" $repoPath 2>&1 | Out-Null
+    } else {
+        Push-Location $repoPath
+        Write-Host "Updating $clientRepo..." -ForegroundColor Cyan
+        git reset --hard HEAD 2>&1 | Out-Null
+        git pull --quiet 2>&1 | Out-Null
+        Pop-Location
+    }
+    
+    if (Test-Path $repoPath) {
+        Push-Location $repoPath
+        
+        # Get commit count by this user
+        $commitCount = (git rev-list --all --count --author="$user" 2>&1)
+        
+        if ($LASTEXITCODE -eq 0) {
+            $userName = $script:userDictionary."@$user"
+            if ($userName) {
+                $reversedName = -join $userName[-1..-$userName.Length]
+                $displayName = $reversedName
+            } else {
+                $displayName = "@$user"
+            }
+            
+            Write-Host "`n$displayName (@$user)" -ForegroundColor Cyan
+            Write-Host "  Total commits: $commitCount" -ForegroundColor Green
+            Write-Host "  Repository: $script:classroomUrl/$clientRepo" -ForegroundColor DarkGray
+            
+            # Get first and last commit dates
+            $firstCommitDate = git log --author="$user" --format="%aI" --reverse | Select-Object -First 1
+            $lastCommitDate = git log --author="$user" --format="%aI" -n 1
+            
+            if ($firstCommitDate -and $lastCommitDate) {
+                $firstDate = [DateTime]::Parse($firstCommitDate)
+                $lastDate = [DateTime]::Parse($lastCommitDate)
+                $daysBetween = ($lastDate - $firstDate).Days
+                
+                Write-Host "  First commit: $($firstDate.ToString('yyyy-MM-dd HH:mm'))" -ForegroundColor Yellow
+                Write-Host "  Last commit:  $($lastDate.ToString('yyyy-MM-dd HH:mm'))" -ForegroundColor Yellow
+                Write-Host "  Days between: $daysBetween days" -ForegroundColor Magenta
+            } 
+        }
+
+            
+            # Show last 5 commits
+            Write-Host "`n  Last 5 commits:" -ForegroundColor Yellow
+            $commits = git log --author="$user" --format="%h|%aI|%s" -n 5 2>&1
+            
+            if ($commits) {
+                foreach ($commit in $commits) {
+                    $parts = $commit -split '\|'
+                    if ($parts.Count -eq 3) {
+                        $hash = $parts[0]
+                        $date = [DateTime]::Parse($parts[1])
+                        $message = $parts[2]
+                        
+                        $timeAgo = (Get-Date) - $date
+                        $timeString = if ($timeAgo.TotalDays -gt 1) {
+                            "$([int]$timeAgo.TotalDays) days ago"
+                        } elseif ($timeAgo.TotalHours -gt 1) {
+                            "$([int]$timeAgo.TotalHours) hours ago"
+                        } else {
+                            "$([int]$timeAgo.TotalMinutes) minutes ago"
+                        }
+                        
+                        Write-Host "    [$hash] $($date.ToString('yyyy-MM-dd HH:mm')) ($timeString)" -ForegroundColor Gray
+                        Write-Host "      $message" -ForegroundColor White
+                    }
+                }
+            }
+    } else {
+            Write-Host "Failed to get commit count for @$user" -ForegroundColor Red
+    }
+        
+    Pop-Location
+}  
+
+
 # When imported as a module, all functions are automatically exported
 # Call the function when script is run directly (not imported as module)
 # Uncomment the function you want to run:
-# Update-Repos -unit $script:unit -users $script:users
-# Update-MyRepos -unit $script:unit -users $script:users
-# Update-Secrets -unit $script:unit -users $script:users
-# Check-ReposDoesExist -unit $script:unit -users $script:users
-# Create-LocalTestrs -unit $script:unit -users $script:users
-# Get-LastWorkingUsers -unit $script:unit -users $script:users -n 10 -Descending
-# Print-LastGrade -unit $script:unit -users $script:users
+# Update-Repos
+# Update-MyRepos
+# Update-Secrets
+# Check-ReposDoesExist
+# Create-LocalTestrs
+# Get-LastWorkingUsers -n 10 -Descending
+# Print-LastGrade
+# Get-UserCommitCount -user 'ArielMeyer1'
