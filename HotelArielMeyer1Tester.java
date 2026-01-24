@@ -214,7 +214,7 @@ public class HotelArielMeyer1Tester {
     public void testFindAvailableByBedsInvalidNegative() {
         Hotel.findAvailableByBeds(-1, roomA, roomB, roomC);
         String output = outContent.toString();
-        assertEquals("", output.trim());
+        assertEquals("No available room with the requested number of beds", output.trim());
     }
 
     // Test findAvailableByBeds - invalid beds (zero)
@@ -222,7 +222,7 @@ public class HotelArielMeyer1Tester {
     public void testFindAvailableByBedsInvalidZero() {
         Hotel.findAvailableByBeds(0, roomA, roomB, roomC);
         String output = outContent.toString();
-        assertEquals("", output.trim());
+        assertEquals("No available room with the requested number of beds", output.trim());
     }
 
     // Test display
