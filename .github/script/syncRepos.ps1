@@ -6,7 +6,7 @@ $script:userDictionary = Get-Content -Path $script:userDictPath -Raw | ConvertFr
 $script:classroomUrl = "https://baraksu-teacher@github.com/baraksu-class-2026"
 
 # List of client repositories
-$script:unit = 'unit04-test01'
+$script:unit = 'maman02'
 $script:clientRepo = ''
 
 # $script:users = @(

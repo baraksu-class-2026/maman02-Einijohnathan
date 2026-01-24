@@ -10,6 +10,19 @@ import java.io.InputStream;
 
 public class HotelArielMeyer1Tester {
 
+    // Static fields copied from Hotel class
+    public static final int ROOM_A_NUM = 307;
+    public static final int ROOM_A_BEDS = 4;
+
+    public static final int ROOM_B_NUM = 205;
+    public static final int ROOM_B_BEDS = 3;
+
+    public static final int ROOM_C_NUM = 402;
+    public static final int ROOM_C_BEDS = 2;
+
+    public static final int MIN_BEDS = 2;
+    public static final int MAX_BEDS = 4;
+
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final PrintStream originalOut = System.out;
     private final InputStream originalIn = System.in;
@@ -22,9 +35,9 @@ public class HotelArielMeyer1Tester {
     public void setUp() {
         System.setOut(new PrintStream(outContent));
         // Create standard test rooms
-        roomA = new HotelRoom(Hotel.ROOM_A_NUM, Hotel.ROOM_A_BEDS);
-        roomB = new HotelRoom(Hotel.ROOM_B_NUM, Hotel.ROOM_B_BEDS);
-        roomC = new HotelRoom(Hotel.ROOM_C_NUM, Hotel.ROOM_C_BEDS);
+        roomA = new HotelRoom(ROOM_A_NUM, ROOM_A_BEDS);
+        roomB = new HotelRoom(ROOM_B_NUM, ROOM_B_BEDS);
+        roomC = new HotelRoom(ROOM_C_NUM, ROOM_C_BEDS);
     }
 
     @AfterEach
@@ -103,9 +116,9 @@ public class HotelArielMeyer1Tester {
     // Test checkIn - successful check-in
     @Test
     public void testCheckInSuccess() {
-        Hotel.checkIn("John Doe", Hotel.ROOM_A_NUM, roomA, roomB, roomC);
+        Hotel.checkIn("John Doe", ROOM_A_NUM, roomA, roomB, roomC);
         String output = outContent.toString();
-        assertTrue(output.contains("Room " + Hotel.ROOM_A_NUM));
+        assertTrue(output.contains("Room " + ROOM_A_NUM));
         assertTrue(output.contains("Occupied by John Doe"));
         assertTrue(roomA.isOccupied());
         assertEquals("John Doe", roomA.getGuest());
@@ -116,7 +129,7 @@ public class HotelArielMeyer1Tester {
     public void testCheckInRoomOccupied() {
         roomA.checkIn("First Guest");
         outContent.reset();
-        Hotel.checkIn("Second Guest", Hotel.ROOM_A_NUM, roomA, roomB, roomC);
+        Hotel.checkIn("Second Guest", ROOM_A_NUM, roomA, roomB, roomC);
         String output = outContent.toString();
         assertTrue(output.contains("Error: Room not available or not found"));
         assertEquals("First Guest", roomA.getGuest());
@@ -135,9 +148,9 @@ public class HotelArielMeyer1Tester {
     public void testCheckOutSuccess() {
         roomB.checkIn("Test Guest");
         outContent.reset();
-        Hotel.checkOut(Hotel.ROOM_B_NUM, roomA, roomB, roomC);
+        Hotel.checkOut(ROOM_B_NUM, roomA, roomB, roomC);
         String output = outContent.toString();
-        assertTrue(output.contains("Room " + Hotel.ROOM_B_NUM));
+        assertTrue(output.contains("Room " + ROOM_B_NUM));
         assertTrue(output.contains("Available"));
         assertFalse(roomB.isOccupied());
     }
@@ -153,28 +166,28 @@ public class HotelArielMeyer1Tester {
     // Test findAvailableByBeds - found room A
     @Test
     public void testFindAvailableByBedsRoomA() {
-        Hotel.findAvailableByBeds(Hotel.ROOM_A_BEDS, roomA, roomB, roomC);
+        Hotel.findAvailableByBeds(ROOM_A_BEDS, roomA, roomB, roomC);
         String output = outContent.toString();
-        assertTrue(output.contains("Room " + Hotel.ROOM_A_NUM));
-        assertTrue(output.contains(Hotel.ROOM_A_BEDS + " Beds"));
+        assertTrue(output.contains("Room " + ROOM_A_NUM));
+        assertTrue(output.contains(ROOM_A_BEDS + " Beds"));
     }
 
     // Test findAvailableByBeds - found room B
     @Test
     public void testFindAvailableByBedsRoomB() {
-        Hotel.findAvailableByBeds(Hotel.ROOM_B_BEDS, roomA, roomB, roomC);
+        Hotel.findAvailableByBeds(ROOM_B_BEDS, roomA, roomB, roomC);
         String output = outContent.toString();
-        assertTrue(output.contains("Room " + Hotel.ROOM_B_NUM));
-        assertTrue(output.contains(Hotel.ROOM_B_BEDS + " Beds"));
+        assertTrue(output.contains("Room " + ROOM_B_NUM));
+        assertTrue(output.contains(ROOM_B_BEDS + " Beds"));
     }
 
     // Test findAvailableByBeds - found room C
     @Test
     public void testFindAvailableByBedsRoomC() {
-        Hotel.findAvailableByBeds(Hotel.ROOM_C_BEDS, roomA, roomB, roomC);
+        Hotel.findAvailableByBeds(ROOM_C_BEDS, roomA, roomB, roomC);
         String output = outContent.toString();
-        assertTrue(output.contains("Room " + Hotel.ROOM_C_NUM));
-        assertTrue(output.contains(Hotel.ROOM_C_BEDS + " Beds"));
+        assertTrue(output.contains("Room " + ROOM_C_NUM));
+        assertTrue(output.contains(ROOM_C_BEDS + " Beds"));
     }
 
     // Test findAvailableByBeds - not found (room occupied)
@@ -183,7 +196,7 @@ public class HotelArielMeyer1Tester {
         roomA.checkIn("Guest");
         roomB.checkIn("Guest");
         roomC.checkIn("Guest");
-        Hotel.findAvailableByBeds(Hotel.ROOM_A_BEDS, roomA, roomB, roomC);
+        Hotel.findAvailableByBeds(ROOM_A_BEDS, roomA, roomB, roomC);
         String output = outContent.toString();
         assertTrue(output.contains("No available room with the requested number of beds"));
     }
@@ -217,33 +230,33 @@ public class HotelArielMeyer1Tester {
     public void testDisplay() {
         Hotel.display(roomA, roomB, roomC);
         String output = outContent.toString();
-        assertTrue(output.contains("Room " + Hotel.ROOM_A_NUM));
-        assertTrue(output.contains("Room " + Hotel.ROOM_B_NUM));
-        assertTrue(output.contains("Room " + Hotel.ROOM_C_NUM));
+        assertTrue(output.contains("Room " + ROOM_A_NUM));
+        assertTrue(output.contains("Room " + ROOM_B_NUM));
+        assertTrue(output.contains("Room " + ROOM_C_NUM));
     }
 
     // Test findRoomByNumber - find room A
     @Test
     public void testFindRoomByNumberRoomA() {
-        HotelRoom found = Hotel.findRoomByNumber(Hotel.ROOM_A_NUM, roomA, roomB, roomC);
+        HotelRoom found = Hotel.findRoomByNumber(ROOM_A_NUM, roomA, roomB, roomC);
         assertNotNull(found);
-        assertEquals(Hotel.ROOM_A_NUM, found.getRoomNum());
+        assertEquals(ROOM_A_NUM, found.getRoomNum());
     }
 
     // Test findRoomByNumber - find room B
     @Test
     public void testFindRoomByNumberRoomB() {
-        HotelRoom found = Hotel.findRoomByNumber(Hotel.ROOM_B_NUM, roomA, roomB, roomC);
+        HotelRoom found = Hotel.findRoomByNumber(ROOM_B_NUM, roomA, roomB, roomC);
         assertNotNull(found);
-        assertEquals(Hotel.ROOM_B_NUM, found.getRoomNum());
+        assertEquals(ROOM_B_NUM, found.getRoomNum());
     }
 
     // Test findRoomByNumber - find room C
     @Test
     public void testFindRoomByNumberRoomC() {
-        HotelRoom found = Hotel.findRoomByNumber(Hotel.ROOM_C_NUM, roomA, roomB, roomC);
+        HotelRoom found = Hotel.findRoomByNumber(ROOM_C_NUM, roomA, roomB, roomC);
         assertNotNull(found);
-        assertEquals(Hotel.ROOM_C_NUM, found.getRoomNum());
+        assertEquals(ROOM_C_NUM, found.getRoomNum());
     }
 
     // Test findRoomByNumber - room not found

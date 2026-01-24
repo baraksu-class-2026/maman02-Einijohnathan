@@ -2,6 +2,7 @@
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
+
 public class HotelRoomEitanmizlishTester {
 
     private static final int DEFAULT_ROOM_NUM = 999;

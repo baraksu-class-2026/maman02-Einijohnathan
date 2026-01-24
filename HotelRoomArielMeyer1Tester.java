@@ -280,6 +280,7 @@ public class HotelRoomArielMeyer1Tester {
         HotelRoom room = new HotelRoom(435, 4);
         room.checkIn("Ariel");
         room.checkOut();
+
         assertFalse(room.isOccupied());
     }
     
