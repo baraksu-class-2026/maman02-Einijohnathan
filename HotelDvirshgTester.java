@@ -1,7 +1,11 @@
+
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 public class HotelDvirshgTester {
+
+    private static final int DEFAULT_ROOM_NUM = 999;
+    private static final int DEFAULT_NUM_BEDS = 2;
 
     // ===== HotelRoom constructor =====
     @Test
@@ -15,13 +19,13 @@ public class HotelDvirshgTester {
     @Test
     public void test02_constructor_invalidRoom() {
         HotelRoom r = new HotelRoom(50, 2);
-        assertEquals(HotelRoom.DEFAULT_ROOM_NUM, r.getRoomNum());
+        assertEquals(DEFAULT_ROOM_NUM, r.getRoomNum());
     }
 
     @Test
     public void test03_constructor_invalidBeds() {
         HotelRoom r = new HotelRoom(200, 1);
-        assertEquals(HotelRoom.DEFAULT_NUM_BEDS, r.getNumBeds());
+        assertEquals(DEFAULT_NUM_BEDS, r.getNumBeds());
     }
 
     // ===== checkIn =====
@@ -108,4 +112,3 @@ public class HotelDvirshgTester {
         assertFalse(r2.isOccupied());
     }
 }
-
