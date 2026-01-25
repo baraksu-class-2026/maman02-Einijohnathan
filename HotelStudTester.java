@@ -14,7 +14,7 @@ public class HotelStudTester {
 		System.out.println("Actual  :");
 		Hotel.display(a, b, c);
 
-		// === displaySorted ===
+		// === displaySorted === 
 		System.out.println("\n== displaySorted ==");
 		System.out.println("Expected:");
 		System.out.println("Room 205, 3 Beds: Available");
@@ -23,7 +23,7 @@ public class HotelStudTester {
 		System.out.println("Actual  :");
 		Hotel.displaySorted(a, b, c);
 		
-      // === findRoomByNumber (קיים) ===
+      // === findRoomByNumber ===
       System.out.println("\n== findRoomByNumber(205) ==");
       System.out.println("Expected: Room 205, 3 Beds: Available");
       System.out.println("Actual  : " + Hotel.findRoomByNumber(205, a, b, c));
