@@ -2,3 +2,5 @@
 .github/badges/* merge=ours
 Readme.md merge=ours
 README.md merge=ours
+Hotel.java merge=ours
+HotelRoom.java merge=ours
