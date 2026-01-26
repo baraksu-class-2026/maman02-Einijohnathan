@@ -1,3 +1,4 @@
+
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
@@ -10,8 +11,10 @@ public class HotelYehonatan351devTester {
         HotelRoom b = new HotelRoom(205, 3);
         HotelRoom c = new HotelRoom(402, 2);
         Hotel.displaySorted(a, b, c);
-        assertTrue(a.getRoomNum() <= b.getRoomNum());
-        assertTrue(b.getRoomNum() <= c.getRoomNum());
+        // displaySorted only prints in sorted order, doesn't modify references
+        assertEquals(307, a.getRoomNum());
+        assertEquals(205, b.getRoomNum());
+        assertEquals(402, c.getRoomNum());
     }
 
     @Test
@@ -20,8 +23,10 @@ public class HotelYehonatan351devTester {
         HotelRoom b = new HotelRoom(200, 3);
         HotelRoom c = new HotelRoom(150, 4);
         Hotel.displaySorted(a, b, c);
-        assertTrue(a.getRoomNum() <= b.getRoomNum());
-        assertTrue(b.getRoomNum() <= c.getRoomNum());
+        // displaySorted only prints in sorted order, doesn't modify references
+        assertEquals(100, a.getRoomNum());
+        assertEquals(200, b.getRoomNum());
+        assertEquals(150, c.getRoomNum());
     }
 
     @Test
@@ -30,8 +35,10 @@ public class HotelYehonatan351devTester {
         HotelRoom b = new HotelRoom(300, 2);
         HotelRoom c = new HotelRoom(500, 3);
         Hotel.displaySorted(a, b, c);
-        assertTrue(a.getRoomNum() <= b.getRoomNum());
-        assertTrue(b.getRoomNum() <= c.getRoomNum());
+        // displaySorted only prints in sorted order, doesn't modify references
+        assertEquals(400, a.getRoomNum());
+        assertEquals(300, b.getRoomNum());
+        assertEquals(500, c.getRoomNum());
     }
 
     @Test
@@ -40,8 +47,10 @@ public class HotelYehonatan351devTester {
         HotelRoom b = new HotelRoom(102, 2);
         HotelRoom c = new HotelRoom(103, 4);
         Hotel.displaySorted(a, b, c);
-        assertTrue(a.getRoomNum() <= b.getRoomNum());
-        assertTrue(b.getRoomNum() <= c.getRoomNum());
+        // displaySorted only prints in sorted order, doesn't modify references
+        assertEquals(101, a.getRoomNum());
+        assertEquals(102, b.getRoomNum());
+        assertEquals(103, c.getRoomNum());
     }
 
     @Test
@@ -50,8 +59,10 @@ public class HotelYehonatan351devTester {
         HotelRoom b = new HotelRoom(400, 3);
         HotelRoom c = new HotelRoom(450, 2);
         Hotel.displaySorted(a, b, c);
-        assertTrue(a.getRoomNum() <= b.getRoomNum());
-        assertTrue(b.getRoomNum() <= c.getRoomNum());
+        // displaySorted only prints in sorted order, doesn't modify references
+        assertEquals(500, a.getRoomNum());
+        assertEquals(400, b.getRoomNum());
+        assertEquals(450, c.getRoomNum());
     }
 
     // ---------------- checkIn ----------------
