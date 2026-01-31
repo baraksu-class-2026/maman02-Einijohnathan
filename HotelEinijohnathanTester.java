@@ -1,10 +1,13 @@
+
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
-public class HotelI5am5coolTester {
+public class HotelEinijohnathanTester {
+
     @Test
     public void test01() {
-        
+
     }
+
 }
 
