@@ -4,7 +4,6 @@ public class Hotel {
     public static Scanner reader = new Scanner(System.in);
 
     public static void main(String[] args) {
-        int roomNum, bedNum;
         HotelRoom room1 = new HotelRoom(307, 4);
         HotelRoom room2 = new HotelRoom(205, 3);
         room2.checkIn("Guest Test");
@@ -27,17 +26,17 @@ public class Hotel {
             case 2:
                 System.out.println("Enter your room number, Enter your name");
                 String guestName = reader.next();
-                roomNum = reader.nextInt();
-                checkIn(guestName, roomNum, room1, room2, room3);
+                int roomNumCase2 = reader.nextInt();
+                checkIn(guestName, roomNumCase2, room1, room2, room3);
                 break;
             case 3:
                 System.out.println("Enter your room number");
-                roomNum = reader.nextInt();
-                checkOut(roomNum, room1, room2, room3);
+                int roomNumCase3 = reader.nextInt();
+                checkOut(roomNumCase3, room1, room2, room3);
                 break;
             case 4:
                 System.out.println("Enter number of beds 2-4");
-                bedNum = reader.nextInt();
+                int bedNum = reader.nextInt();
                 findAvailableByBeds(bedNum, room1, room2, room3);
                 break;
             default:
