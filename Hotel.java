@@ -4,43 +4,36 @@ public class Hotel {
     public static Scanner reader = new Scanner(System.in);
 
     public static void main(String[] args) {
-        int roomNum;
-        int bedNum;
         HotelRoom room1 = new HotelRoom(307, 4);
         HotelRoom room2 = new HotelRoom(205, 3);
         room2.checkIn("Guest Test");
         HotelRoom room3 = new HotelRoom(402, 2);
-
         displaySorted(room1, room2, room3);
-
         System.out.println("Hotel Menu :");
         System.out.println("1 - Display rooms by room number (ascending)");
         System.out.println("2 - Check-in to a room");
         System.out.println("3 - Check-out from a room");
         System.out.println("4 - Find available room by requested beds");
         System.out.println("Enter your choice :");
-
         int choice = reader.nextInt();
-
         switch (choice) {
             case 1:
                 displaySorted(room1, room2, room3);
                 break;
             case 2:
-                System.out.println("Enter your room number:");
-                roomNum = reader.nextInt();
-                System.out.println("Enter your name:");
+                System.out.println("Enter your room number,Enter your name");
                 String guestName = reader.next();
-                checkIn(guestName, roomNum, room1, room2, room3);
+                int roomNumIn = reader.nextInt();
+                checkIn(guestName, roomNumIn, room1, room2, room3);
                 break;
             case 3:
-                System.out.println("Enter your room number:");
-                roomNum = reader.nextInt();
-                checkOut(roomNum, room1, room2, room3);
+                System.out.println("Enter your room number");
+                int roomNumOut = reader.nextInt();
+                checkOut(roomNumOut, room1, room2, room3);
                 break;
             case 4:
-                System.out.println("Enter number of beds 2-4:");
-                bedNum = reader.nextInt();
+                System.out.println("Enter number of beds 2-4");
+                int bedNum = reader.nextInt();
                 findAvailableByBeds(bedNum, room1, room2, room3);
                 break;
             default:
@@ -53,7 +46,6 @@ public class Hotel {
         HotelRoom first;
         HotelRoom second;
         HotelRoom third;
-
         if (a.before(b) && a.before(c)) {
             first = a;
             if (b.before(c)) {
@@ -112,7 +104,7 @@ public class Hotel {
             chosen.checkOut();
             System.out.println(chosen);
         } else {
-            System.out.println("Error: Room not found");
+            System.out.println("Error: Room not available or not found");
         }
     }
 
