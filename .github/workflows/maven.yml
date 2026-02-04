@@ -94,10 +94,10 @@ jobs:
             if [ $TESTS -gt 0 ]; then
               GRADE=$((PASSED * 100 / TESTS))
 
-              if [ "${{ steps.build.outcome }}" = "failure" ]; then
-                GRADE=$((GRADE - 25))
+              if [ "${{ steps.build.outcome }}" != "success" ]; then
+                GRADE=0
               fi
-              
+               
               # Ensure grade doesn't go below 0
               if [ $GRADE -lt 0 ]; then
                 GRADE=0
@@ -354,7 +354,7 @@ jobs:
           echo "$GRADE_CONTENT" >> README.md
 
           # Add Checkstyle status if it failed
-          if [ "${{ steps.build.outcome }}" = "failure" ]; then
+          if [ "${{ steps.build.outcome }}" != "success" ]; then
             REPO_NAME="${{ github.event.repository.name }}"
             OWNER="${{ github.repository_owner }}"
             RUN_ID="${{ github.run_id }}"
