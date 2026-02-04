@@ -1,4 +1,4 @@
-name: CI\CD v101
+name: CI\CD 104
 on:
   push:
     branches: ["main", "testSolution"]
@@ -16,7 +16,6 @@ permissions:
 jobs:
   run-autograding-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 1.5
     if: github.actor != 'github-classroom[bot]' && (github.event_name != 'push' || github.event.pull_request == null)
     steps:
       - name: Checkout code
@@ -40,22 +39,22 @@ jobs:
           java-version: "21"
           distribution: "temurin"
           cache: maven
-      - name: Install Checkstyle
-        run: |
-          curl -L -o checkstyle.jar https://github.com/checkstyle/checkstyle/releases/download/checkstyle-10.20.0/checkstyle-10.20.0-all.jar
-
-      - name: Run Checkstyle
-        run: |
-          java -jar checkstyle.jar \
-            -c .github/google_checks.xml \
-            -f xml \
-            -o checkstyle-result.xml \
-            $(git ls-files '*.java' | grep -v 'Tester\.java$')
-
       - name: Install reviewdog
         uses: reviewdog/action-setup@v1
+      - name: Clean badges
+        run: |
+          echo "" > .github/badges/grade.md
+          echo "" > .github/badges/test_report.md
+          echo "" > .github/badges/review.md
+          echo "" > README.md
+
+      - name: Build with Maven
+        id: build
+        if: always()
+        run: mvn -B package checkstyle:check --file pom.xml
 
       - name: Report with reviewdog
+        if: always()
         id: reviewdog
         run: |
           reviewdog -name="checkstyle" \
@@ -63,15 +62,12 @@ jobs:
             -filter-mode=nofilter \
             -level=error \
             -fail-level=any \
-            -f=checkstyle < checkstyle-result.xml
+            -f=checkstyle < target/checkstyle-result.xml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_SHA: ${{ steps.get_sha.outputs.sha }}
 
-      - name: Build with Maven
-        if: steps.reviewdog.outcome == 'success'
-        run: mvn -B package --file pom.xml -Dcheckstyle.skip=true
       - name: Calculate Grade
         if: always()
         id: grade
@@ -96,8 +92,13 @@ jobs:
             if [ $TESTS -gt 0 ]; then
               GRADE=$((PASSED * 100 / TESTS))
 
-              if [ "${{ steps.reviewdog.outcome }}" = "failure" ]; then
+              if [ "${{ steps.build.outcome }}" = "failure" ]; then
                 GRADE=$((GRADE - 25))
+              fi
+              
+              # Ensure grade doesn't go below 0
+              if [ $GRADE -lt 0 ]; then
+                GRADE=0
               fi
               
             else
@@ -110,6 +111,283 @@ jobs:
             echo "Errors: $ERRORS"
             echo "Skipped: $SKIPPED"
             echo "Grade: ${GRADE}%"
+            
+            # Set outputs for other steps
+            echo "tests=$TESTS" >> $GITHUB_OUTPUT
+            echo "passed=$PASSED" >> $GITHUB_OUTPUT
+            echo "failed=$FAILURES" >> $GITHUB_OUTPUT
+            echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+            echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+            echo "grade=$GRADE" >> $GITHUB_OUTPUT
+          else
+            echo "No test results found"
+            echo "tests=0" >> $GITHUB_OUTPUT
+            echo "passed=0" >> $GITHUB_OUTPUT
+            echo "failed=0" >> $GITHUB_OUTPUT
+            echo "errors=0" >> $GITHUB_OUTPUT
+            echo "skipped=0" >> $GITHUB_OUTPUT
+            echo "grade=0" >> $GITHUB_OUTPUT
+          fi
+      - name: Create Grade Badge
+        if: always()
+        run: |
+          mkdir -p .github/badges
+          GRADE="${{ steps.grade.outputs.grade }}"
+          if [ $GRADE -ge 90 ]; then
+            COLOR="brightgreen"
+          elif [ $GRADE -ge 70 ]; then
+            COLOR="green"
+          elif [ $GRADE -ge 50 ]; then
+            COLOR="yellow"
+          else
+            COLOR="red"
+          fi
+          # Create badge with link to GitHub Actions run
+          REPO_NAME="${{ github.event.repository.name }}"
+          OWNER="${{ github.repository_owner }}"
+          RUN_ID="${{ github.run_id }}"
+          TEST_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
+          echo "[![Grade](https://img.shields.io/badge/Grade-${GRADE}%25-${COLOR})](${TEST_REPORT_URL})" > .github/badges/grade.md
+          echo "[📊 View Test Reports](${TEST_REPORT_URL})" > .github/badges/test_report.md
+      - name: Publish Test Report
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: Maven Test Results
+          path: target/surefire-reports/*.xml
+          reporter: java-junit
+          fail-on-error: false
+      # Collect all Java files (excluding *Tester.java)
+      - name: Collect Java files
+        if: always()
+        run: |
+          find . -name "*.java" ! -name "*Tester.java" -type f > java_files.txt
+      # Run AI Review with ChatGPT
+      - name: AI Review with ChatGPT
+        if: always() && steps.grade.outputs.grade >= 80 && steps.build.outcome == 'success'
+        id: ai_review
+        run: |
+          mkdir -p .github/badges
+
+          # Build combined content of all Java files
+          ALL_CONTENT=""
+          for file in $(cat java_files.txt); do
+            FILE_CONTENT=$(cat "$file")
+            ALL_CONTENT="${ALL_CONTENT}--- File: $file ---\n${FILE_CONTENT}\n\n"
+          done
+
+          # Escape for JSON
+          ALL_CONTENT_ESCAPED=$(echo "$ALL_CONTENT" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+
+          # Send all files in a single request with retry logic
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          RESPONSE=""
+
+          # Check if API key is set
+          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "❌ ERROR: OPENAI_API_KEY secret is not configured"
+            echo "Please add your OpenAI API key to GitHub repository secrets"
+            RESPONSE="⚠️ **AI Review Unavailable** (-20 points): OpenAI API key not configured. Please add OPENAI_API_KEY to repository secrets, or ask your teacher, Barak, to add a key for you."
+            echo "## AI Code Review" > .github/badges/review.md
+            echo "" >> .github/badges/review.md
+            echo "$RESPONSE" >> .github/badges/review.md
+            
+            # Apply penalty for missing AI review
+            ORIGINAL_GRADE="${{ steps.grade.outputs.grade }}"
+            ADJUSTED_GRADE=$((ORIGINAL_GRADE - 20))
+            if [ $ADJUSTED_GRADE -lt 0 ]; then
+              ADJUSTED_GRADE=0
+            fi
+            
+            # Update grade badge
+            if [ $ADJUSTED_GRADE -ge 90 ]; then
+              COLOR="brightgreen"
+            elif [ $ADJUSTED_GRADE -ge 70 ]; then
+              COLOR="green"
+            elif [ $ADJUSTED_GRADE -ge 50 ]; then
+              COLOR="yellow"
+            else
+              COLOR="red"
+            fi
+            
+            REPO_NAME="${{ github.event.repository.name }}"
+            OWNER="${{ github.repository_owner }}"
+            RUN_ID="${{ github.run_id }}"
+            TEST_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
+            echo "[![Grade](https://img.shields.io/badge/Grade-${ADJUSTED_GRADE}%25-${COLOR})](${TEST_REPORT_URL}) *(Original: ${ORIGINAL_GRADE}%, Penalties: -20)*" > .github/badges/grade.md
+            
+            echo "adjusted_grade=$ADJUSTED_GRADE" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RAW_RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
+              -d "{
+                 \"model\": \"gpt-5-mini\",
+                    \"messages\": [
+                  {\"role\": \"system\", \"content\": \"You are a Java code reviewer acting as a KIND and CONSERVATIVE high-school computer science teacher.\\n\\nTHIS IS A LEARNING EXERCISE.\\nYour job is to help students improve without discouraging them.\\n\\nCRITICAL BEHAVIOR RULES (FOLLOW EXACTLY):\\n- Be conservative: when in doubt, do NOT report an issue.\\n- Do NOT be strict. Do NOT over-optimize. Do NOT show advanced ideas.\\n- Stay strictly within high-school Java level.\\n\\nSTUDENT KNOWLEDGE LIMITS (HARD CONSTRAINT):\\nStudents have NOT learned:\\n- Lambda expressions\\n- Inheritance\\n- Interfaces\\n- Functional programming\\n- Advanced refactoring patterns\\nYou MUST NOT mention or suggest these concepts in any form.\\n\\nREVIEW SCOPE:\\n- ONLY report issues that REQUIRE changes.\\n- NEVER comment on code that is already correct.\\n- If the code is acceptable, explicitly say that no changes are required.\\n\\nOUTPUT LIMITS:\\n- MAXIMUM 10 lines total.\\n- Short sentences. No explanations beyond what is required.\\n- Friendly and encouraging tone.\\n\\nABSOLUTE RULES:\\n1) For DUPLICATE CODE issues: provide the COMPLETE extracted method (signature + body) in a code block.\\n2) For ALL OTHER issues: explain WHAT needs to change. Do NOT provide code.\\n3) If unsure, do NOT flag the issue.\"},
+                  {\"role\": \"user\", \"content\": \"Review the following Java file.\\n\\nFOCUS (IN THIS ORDER ONLY):\\n1) Duplicate code\\n2) Magic numbers\\n\\nDUPLICATE CODE — STRICT DEFINITION:\\n- Applies ONLY within a SINGLE class.\\n- The SAME or LOGICALLY EQUIVALENT logic appears more than once.\\n- The logic can be extracted into ONE simple helper method.\\n- Extraction MUST REDUCE the total number of lines.\\n- If extraction does NOT reduce lines, it is NOT duplicate code.\\n\\nALLOWED SOLUTIONS FOR DUPLICATE CODE:\\n- Simple helper methods only\\n- Use basic Java: loops, conditionals, primitive types, Strings, existing classes\\n\\nFORBIDDEN SOLUTIONS (NEVER SUGGEST):\\n- Lambda expressions\\n- Interfaces or functional interfaces\\n- Inheritance\\n- Passing behavior as parameters\\n- Advanced iteration or abstraction patterns\\n\\nIF DUPLICATE CODE IS FOUND:\\n- Include ❌ Duplicate Code (-10 points)\\n- Name the methods with duplication\\n- Provide the COMPLETE extracted helper method in a code block\\n- Do NOT include any other code\\n- Do NOT mention correct code\\n\\nMAGIC NUMBERS:\\n- Do NOT penalize magic numbers inside main\\n- Penalize magic numbers ONLY in constructors, getters, or setters\\n- Magic numbers must be replaced with named static final constants\\n- For magic numbers: explain WHAT should change. NO code.\\n\\nSCORING (ONLY IF APPLICABLE):\\n- ❌ Duplicate Code (-10 points)\\n- ❌ Magic Numbers (-5 points)\\n\\nNO ISSUES FOUND:\\n- Start with: ✅ Code Quality: Excellent!\\n- Add ONE short compliment in Hebrew inspired by Jewish tradition or biblical wisdom\\n\\nIF PENALTIES APPLY:\\n- End with: Recommended adjusted grade: [original grade minus penalties]%\\n\\nDEFAULT BEHAVIOR:\\nIf unsure about an issue, say the code requires no changes.\\n\\nCode:\\n$ALL_CONTENT_ESCAPED\"}
+                ],
+                \"max_completion_tokens\": 4000,
+                \"store\": true
+              }")
+
+            # Check for API errors first
+            ERROR_MSG=$(echo "$RAW_RESPONSE" | jq -r '.error.message // empty')
+            if [ -n "$ERROR_MSG" ]; then
+              echo "API Error: $ERROR_MSG"
+              echo "Full response: $RAW_RESPONSE"
+            fi
+
+            # Extract the content
+            RESPONSE=$(echo "$RAW_RESPONSE" | jq -r '.choices[0].message.content // empty')
+
+            # Check if response is not null or empty
+            if [ -n "$RESPONSE" ]; then
+              echo "API request successful"
+              break
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "API response was null/empty. Retrying in 5 seconds... (Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
+              sleep 5
+            else
+              echo "API request failed after $MAX_RETRIES attempts"
+              RESPONSE="⚠️ **AI Review Unavailable** (-20 points): API request failed. Please check back later."
+            fi
+          done
+
+          echo "## AI Code Review" > .github/badges/review.md
+          echo "" >> .github/badges/review.md
+          echo "$RESPONSE" >> .github/badges/review.md
+
+          # Check for violations and update grade
+          CODING_STANDARD_PENALTY=0
+          DUPLICATE_CODE_PENALTY=0
+          MAGIC_NUMBERS_PENALTY=0
+          AI_REVIEW_UNAVAILABLE_PENALTY=0
+
+          if grep -q "⚠️ \*\*AI Review Unavailable\*\*" .github/badges/review.md; then
+            AI_REVIEW_UNAVAILABLE_PENALTY=20
+          fi
+
+          if grep -q "❌ Duplicate Code" .github/badges/review.md; then
+            DUPLICATE_CODE_PENALTY=10
+          fi
+
+          if grep -q "❌ Magic Numbers" .github/badges/review.md; then
+            MAGIC_NUMBERS_PENALTY=5
+          fi
+
+          TOTAL_PENALTY=$((CODING_STANDARD_PENALTY + DUPLICATE_CODE_PENALTY + MAGIC_NUMBERS_PENALTY + AI_REVIEW_UNAVAILABLE_PENALTY))
+
+
+          if [ $TOTAL_PENALTY -gt 0 ]; then
+            ORIGINAL_GRADE="${{ steps.grade.outputs.grade }}"
+            ADJUSTED_GRADE=$((ORIGINAL_GRADE - TOTAL_PENALTY))
+            
+            # Ensure grade doesn't go below 0
+            if [ $ADJUSTED_GRADE -lt 0 ]; then
+              ADJUSTED_GRADE=0
+            fi
+            
+            # Determine color for adjusted grade
+            if [ $ADJUSTED_GRADE -ge 90 ]; then
+              COLOR="brightgreen"
+            elif [ $ADJUSTED_GRADE -ge 70 ]; then
+              COLOR="green"
+            elif [ $ADJUSTED_GRADE -ge 50 ]; then
+              COLOR="yellow"
+            else
+              COLOR="red"
+            fi
+            
+            # Update grade badge with adjusted grade
+            REPO_NAME="${{ github.event.repository.name }}"
+            OWNER="${{ github.repository_owner }}"
+            RUN_ID="${{ github.run_id }}"
+            TEST_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
+            echo "[![Grade](https://img.shields.io/badge/Grade-${ADJUSTED_GRADE}%25-${COLOR})](${TEST_REPORT_URL}) *(Original: ${ORIGINAL_GRADE}%, Penalties: -${TOTAL_PENALTY})*" > .github/badges/grade.md
+            
+            # Set output for adjusted grade
+            echo "adjusted_grade=$ADJUSTED_GRADE" >> $GITHUB_OUTPUT
+          else
+            # No penalties, adjusted grade equals original grade
+            echo "adjusted_grade=${{ steps.grade.outputs.grade }}" >> $GITHUB_OUTPUT
+          fi
+      - name: GitHub Classroom Grader
+        uses: baraksu-class-2026/manual-grading-command-grader@v1
+        if: always()
+        id: run-tests
+        with:
+          test-name: Junit And AI.
+          score: ${{ steps.ai_review.outputs.adjusted_grade || steps.grade.outputs.grade }}
+          max-score: 100
+          pass-score: 85
+      - name: Autograding Reporter
+        if: always()
+        uses: classroom-resources/autograding-grading-reporter@v1
+        env:
+          RUN-TESTS_RESULTS: "${{steps.run-tests.outputs.result}}"
+        with:
+          runners: run-tests
+      # Update README with all badge contents (last step)
+      - name: Update README with Badge
+        if: always()
+        run: |
+          # Read the badge files content
+          GRADE_CONTENT=$(cat .github/badges/grade.md)
+          TEST_REPORT_CONTENT=$(cat .github/badges/test_report.md)
+          REVIEW_CONTENT=$(cat .github/badges/review.md)
+
+          # Create README with injected content
+          cat > README.md << 'EOFMARKER'
+          ## Grade
+
+          EOFMARKER
+          echo "$GRADE_CONTENT" >> README.md
+
+          # Add Checkstyle status if it failed
+          if [ "${{ steps.build.outcome }}" = "failure" ]; then
+            REPO_NAME="${{ github.event.repository.name }}"
+            OWNER="${{ github.repository_owner }}"
+            RUN_ID="${{ github.run_id }}"
+            CHECKSTYLE_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
+            cat >> README.md << 'EOFMARKER2'
+
+          ## Build with Maven
+
+          EOFMARKER2
+            echo "❌ **Build Failed** - [View Action](${CHECKSTYLE_REPORT_URL})" >> README.md
+          fi
+
+          cat >> README.md << 'EOFMARKER'
+
+          EOFMARKER
+          echo "$REVIEW_CONTENT" >> README.md
+      # Commit and push all changes (final step)
+      - name: Commit and Push All Changes
+        if: always()
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Pull latest changes BEFORE staging to avoid conflicts
+          git pull --rebase origin ${{ github.ref_name }} || echo "Already up to date"
+
+          # Stage all changed files
+          git add README.md .github/badges/grade.md .github/badges/test_report.md .github/badges/review.md
+
+          # Commit all changes
+          git commit -m "Update README and badges [skip ci]" || echo "No changes to commit"
+
+          # Push changes
+          git push || echo "Nothing to push"            echo "Grade: ${GRADE}%"
             
             # Set outputs for other steps
             echo "tests=$TESTS" >> $GITHUB_OUTPUT
