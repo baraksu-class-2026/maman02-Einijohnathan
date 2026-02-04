@@ -14,12 +14,12 @@ public class Hotel {
 
         displaySorted(room1, room2, room3);
 
-        System.out.println("Hotel Menu :");
+        System.out.println("Hotel Menu:");
         System.out.println("1 - Display rooms by room number (ascending)");
         System.out.println("2 - Check-in to a room");
         System.out.println("3 - Check-out from a room");
         System.out.println("4 - Find available room by requested beds");
-        System.out.println("Enter your choice :");
+        System.out.println("Enter your choice:");
 
         int choice = reader.nextInt();
         switch (choice) {
@@ -49,9 +49,9 @@ public class Hotel {
     }
 
     public static void displaySorted(HotelRoom a, HotelRoom b, HotelRoom c) {
-        HotelRoom first;
-        HotelRoom second;
-        HotelRoom third;
+        HotelRoom first = new HotelRoom();
+        HotelRoom second = new HotelRoom();
+        HotelRoom third = new HotelRoom();
 
         if (a.before(b) && a.before(c)) {
             first = a;
@@ -69,7 +69,7 @@ public class Hotel {
                 third = c;
             } else {
                 second = c;
-                third = b;
+                third = a;
             }
         } else {
             first = c;
