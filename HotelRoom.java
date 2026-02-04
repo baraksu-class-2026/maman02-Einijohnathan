@@ -1,4 +1,3 @@
-
 public class HotelRoom
 {
     private int _roomNum;
@@ -22,19 +21,20 @@ public class HotelRoom
     _guest = DEF_GUEST;
     }
     public HotelRoom(int roomNum, int numBeds){
-        if (roomNum < MIN_NUM_ROOM && roomNum > MAX_NUM_ROOM){
+        if (roomNum < MIN_NUM_ROOM || roomNum > MAX_NUM_ROOM){
             _roomNum = DEF_NUM_ROOM;
         }
         else{
             _roomNum = roomNum;
         }
-        if (numBeds < MIN_NUM_BEDS && numBeds > MAX_NUM_BEDS){
+        if (numBeds < MIN_NUM_BEDS || numBeds > MAX_NUM_BEDS){
             _numBeds = DEF_NUM_BEDS;
         }
         else{
             _numBeds = numBeds;
         }
-        
+        _occupied = DEF_OCCUPIED;
+        _guest = DEF_GUEST;
     }
     public int getRoomNum(){
         return _roomNum;
@@ -49,7 +49,7 @@ public class HotelRoom
         return _guest;
     }
     public void setRoomNum(int roomNum){
-        if (roomNum < MIN_NUM_ROOM && roomNum > MAX_NUM_ROOM){
+        if (roomNum < MIN_NUM_ROOM || roomNum > MAX_NUM_ROOM){
             _roomNum = DEF_NUM_ROOM;
         }
         else{
@@ -57,7 +57,7 @@ public class HotelRoom
         }
     }
     public void setNumBeds(int numBeds){
-        if (numBeds < MIN_NUM_BEDS && numBeds > MAX_NUM_BEDS){
+        if (numBeds < MIN_NUM_BEDS || numBeds > MAX_NUM_BEDS){
             _numBeds = DEF_NUM_BEDS;
         }
         else{
