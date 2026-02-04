@@ -1,1 +1,1 @@
-[![Grade](https://img.shields.io/badge/Grade-100%25-brightgreen)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21684574594)
+[![Grade](https://img.shields.io/badge/Grade-100%25-brightgreen)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21689094515)
