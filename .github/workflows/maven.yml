@@ -51,6 +51,7 @@ jobs:
 
       - name: Build with Maven
         id: build
+        timeout-minutes: 2
         if: always()
         run: mvn -B package checkstyle:check --file pom.xml
 
