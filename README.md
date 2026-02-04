@@ -1,17 +1,11 @@
 ## Grade
 
-[![Grade](https://img.shields.io/badge/Grade-0%25-red)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21330453199)
-
-## Coding Standards
-
-❌ **Coding Standard Failed (-25 points)** - [View Checkstyle Report](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21330453199)
+[![Grade](https://img.shields.io/badge/Grade-69%25-yellow)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21682751900) *(Original: 99%, Penalties: -30)*
 
 ## Tests
 
-[📊 View Test Reports](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21330453199)
+[📊 View Test Reports](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21682751900)
 
 ## AI Code Review
 
-❌ **AI Hasn't Reviewed Your Work**
-
-Your submission was not sent for AI review because the basic requirements were not met.
+❌ **Sending to AI Review Without Perfect Tests** (-30 points): Submitting code for AI review when tests don't pass wastes your teacher's money. Barak doesn't like it. Please ensure all tests pass before requesting AI review.

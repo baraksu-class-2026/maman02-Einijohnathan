@@ -1,4 +1,5 @@
 import java.util.Scanner;
+
 public class Hotel{
     public static Scanner reader = new Scanner(System.in);
     public static void main(String[] args) {

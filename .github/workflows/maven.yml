@@ -160,13 +160,45 @@ jobs:
       - name: Collect Java files
         if: always()
         run: |
-          find . -name "*.java" -not -name "*Tester.java" -type f > java_files.txt
+          find . -name "Hotel*.java" -not -name "*Tester.java" -type f > java_files.txt
       # Run AI Review with ChatGPT
       - name: AI Review with ChatGPT
         if: always() && steps.grade.outputs.grade > 0 && steps.reviewdog.outcome == 'success'
         id: ai_review
         run: |
           mkdir -p .github/badges
+
+          # Function to update grade badge with penalty
+          update_grade_badge() {
+            local ORIGINAL_GRADE=$1
+            local PENALTY=$2
+            local PENALTY_MESSAGE=$3
+            
+            ADJUSTED_GRADE=$((ORIGINAL_GRADE - PENALTY))
+            if [ $ADJUSTED_GRADE -lt 0 ]; then
+              ADJUSTED_GRADE=0
+            fi
+            
+            # Determine color for adjusted grade
+            if [ $ADJUSTED_GRADE -ge 90 ]; then
+              COLOR="brightgreen"
+            elif [ $ADJUSTED_GRADE -ge 70 ]; then
+              COLOR="green"
+            elif [ $ADJUSTED_GRADE -ge 50 ]; then
+              COLOR="yellow"
+            else
+              COLOR="red"
+            fi
+            
+            # Update grade badge
+            REPO_NAME="${{ github.event.repository.name }}"
+            OWNER="${{ github.repository_owner }}"
+            RUN_ID="${{ github.run_id }}"
+            TEST_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
+            echo "[![Grade](https://img.shields.io/badge/Grade-${ADJUSTED_GRADE}%25-${COLOR})](${TEST_REPORT_URL}) *(Original: ${ORIGINAL_GRADE}%, Penalties: -${PENALTY})${PENALTY_MESSAGE}*" > .github/badges/grade.md
+            
+            echo "adjusted_grade=$ADJUSTED_GRADE" >> $GITHUB_OUTPUT
+          }
 
           # Build combined content of all Java files
           ALL_CONTENT=""
@@ -193,30 +225,20 @@ jobs:
             echo "$RESPONSE" >> .github/badges/review.md
             
             # Apply penalty for missing AI review
-            ORIGINAL_GRADE="${{ steps.grade.outputs.grade }}"
-            ADJUSTED_GRADE=$((ORIGINAL_GRADE - 20))
-            if [ $ADJUSTED_GRADE -lt 0 ]; then
-              ADJUSTED_GRADE=0
-            fi
+            update_grade_badge "${{ steps.grade.outputs.grade }}" 20 ""
+            exit 0
+          fi
+
+          # Check if grade is less than 100 - skip AI review API call
+          if [ "${{ steps.grade.outputs.grade }}" -lt 100 ]; then
+            echo "Grade is less than 100, skipping AI review"
+            RESPONSE="❌ **Sending to AI Review Without Perfect Tests** (-30 points): Submitting code for AI review when tests don't pass wastes your teacher's money. Barak doesn't like it. Please ensure all tests pass before requesting AI review."
+            echo "## AI Code Review" > .github/badges/review.md
+            echo "" >> .github/badges/review.md
+            echo "$RESPONSE" >> .github/badges/review.md
             
-            # Update grade badge
-            if [ $ADJUSTED_GRADE -ge 90 ]; then
-              COLOR="brightgreen"
-            elif [ $ADJUSTED_GRADE -ge 70 ]; then
-              COLOR="green"
-            elif [ $ADJUSTED_GRADE -ge 50 ]; then
-              COLOR="yellow"
-            else
-              COLOR="red"
-            fi
-            
-            REPO_NAME="${{ github.event.repository.name }}"
-            OWNER="${{ github.repository_owner }}"
-            RUN_ID="${{ github.run_id }}"
-            TEST_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
-            echo "[![Grade](https://img.shields.io/badge/Grade-${ADJUSTED_GRADE}%25-${COLOR})](${TEST_REPORT_URL}) *(Original: ${ORIGINAL_GRADE}%, Penalties: -20)*" > .github/badges/grade.md
-            
-            echo "adjusted_grade=$ADJUSTED_GRADE" >> $GITHUB_OUTPUT
+            # Apply penalty for submitting without perfect tests
+            update_grade_badge "${{ steps.grade.outputs.grade }}" 30 ""
             exit 0
           fi
 
@@ -225,10 +247,10 @@ jobs:
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
               -d "{
-                 \"model\": \"gpt-4o\",
+                 \"model\": \"gpt-4o",
                     \"messages\": [
-                  {\"role\": \"system\", \"content\": \"You are a senior Java reviewer and computer science teacher. Provide accurate, constructive feedback suitable for high school students.\\n\\nTHIS IS A LEARNING EXERCISE.\\n- DO NOT provide code solutions or example implementations.\\n- Explain WHAT must be changed, not HOW to code it.\\n- DO NOT flag code that is already correct.\\n- ONLY report real issues that REQUIRE code changes.\\n- When unsure, DO NOT penalize.\"},
-                  {\"role\": \"user\", \"content\": \"Review the following Java files for a student assignment.\\n\\nABSOLUTE RULES:\\n1) DO NOT review or comment on any files ending with 'Tester.java'.\\n2) DO NOT provide code or partial solutions.\\n3) ONLY describe WHAT needs to change, never HOW.\\n4) Keep feedback short, clear, and encouraging for high school students.\\n\\nFOCUS ON:\\n- Missing functionality required to pass tests\\n- Duplicate code (CRITICAL)\\n- Magic numbers\\n- Syntax, indentation, and brace usage\\n- Readability and logic flow\\n\\nMAGIC NUMBERS:\\n- Magic numbers are NOT allowed outside main()\\n- Use named final constants instead\\n- Magic numbers ARE allowed inside main() for testing\\n\\nBRACES:\\n- ALL if / else / for / while statements MUST use {}\\n- Missing braces is a violation\\n\\nCOPY CONSTRUCTORS:\\n- The copy constructor does not perform validation; it only copies existing field values and creates new objects for class-type fields.\\n- DO NOT flag copy constructors for lack of validation - this is correct behavior.\\n\\nDUPLICATE CODE — STRICT & MANDATORY (HIGHEST PRIORITY):\\n\\n❗ ANY DUPLICATE LOGIC MUST BE FLAGGED ❗\\n\\nEXCEPTIONS:\\n- FlightA and FlightB are separate main programs and MAY have duplicate code between them. DO NOT flag duplicate code between FlightA.java and FlightB.java.\\n- Repeated validation logic (e.g., range checks with default values) across DIFFERENT CLASSES is considered acceptable and is NOT duplicate code. DO NOT flag this.\\n\\nYou MUST actively search for ALL forms of duplicate code, including:\\n\\n1) IDENTICAL CODE\\n- Same condition\\n- Same instruction\\n- Same calculation\\n\\n2) LOGICALLY EQUIVALENT CODE (EVEN IF TEXT IS DIFFERENT)\\n- Same condition written with different spacing or formatting\\n- Same range checks using the same constants\\n\\n3) SIMILAR CONDITIONS\\n- Conditions that check the same rule or constraint\\n- Range checks enforcing the same limits\\n- Validation logic enforcing the same business rule\\n\\n4) SIMILAR INSTRUCTIONS\\n- Same assignments performed in multiple places\\n- Same method calls performed after similar checks\\n- Same logical steps repeated in different methods\\n\\n5) OPPOSITE METHODS\\n- Check the implementation of opposite methods. When two methods represent opposite operations (e.g., bigger / smaller, cheaper / morExpens), one method must be implemented by calling the other.\\n\\nMOST COMMON REQUIRED CHECK (MANDATORY):\\n- Compare ALL constructors against ALL setter methods WITHIN THE SAME CLASS\\n- If the SAME or SIMILAR validation logic appears in more than one place WITHIN THE SAME CLASS, it IS duplicate code\\n- Validation logic must exist in ONE place only WITHIN EACH CLASS\\n- EXCEPTION: Copy constructors are excluded from this check\\n\\nDuplicate code ONLY applies when:\\n- The same or similar logic is written multiple times within the SAME class\\n- AND extracting that logic into a single method would reduce duplication\\nIf logic cannot be reduced by extracting a method (because it is already shared via an interface, abstract method, or overridden behavior), it is NOT duplicate code and MUST NOT be penalized.\\n\\nNOT DUPLICATE CODE (DO NOT FLAG):\\n- Methods that iterate through a collection with DIFFERENT search criteria (e.g., searching by room number vs. searching by bed count)\\n- Standard iteration patterns (for/while loops) that perform different operations\\n- Methods that loop through the same data structure but check different conditions\\n- Simple sequential checks (if-else chains) with different comparison logic\\n\\nIf ANY duplicate logic is found:\\n- You MUST include ❌ **Duplicate Code** (-10 points recommended)\\n- Clearly state which methods contain duplicated or similar logic\\n- State that the shared logic must appear only once\\n\\nVALIDATION PROCESS — FOLLOW EXACTLY:\\n1) Read the Java code carefully\\n2) Compare logic, NOT formatting\\n3) Treat similar conditions and similar instructions as duplicate\\n4) Verify the duplication truly exists WITHIN THE SAME CLASS\\n5) ONLY flag issues that REQUIRE code changes\\n6) Cite the exact methods where duplication occurs\\n\\nCRITICAL ENFORCEMENT RULES:\\n- DO NOT mention code that is already correct\\n- DO NOT suggest best practices unless a change is required\\n- String literals (e.g., \\\"test1\\\") are NOT variable names\\n\\nSCORING SECTIONS (ONLY INCLUDE IF APPLICABLE):\\n- ❌ **Duplicate Code** (-10 points) → REQUIRED if ANY duplicate logic exists\\n- ❌ **Magic Numbers** (-5 points) → constants required outside main()\\n\\nNO ISSUES FOUND:\\n- Start with: ✅ **Code Quality: Excellent!**\\n- Keep response minimal\\n\\nIF PENALTIES APPLY:\\n- End with: Recommended adjusted grade: [original grade minus penalties]%\\n\\nWhen in doubt — DO NOT penalize.\\n\\nCode:\\n\\n$ALL_CONTENT_ESCAPED\"}
+                  {\"role\": \"system\", \"content\": \"You are a senior Java code reviewer and computer science teacher reviewing student exercises at a high-school level.\\n\\nTHIS IS A LEARNING EXERCISE.\\n\\nReview the student's code and provide clear, constructive feedback.\\n\\nThe students haven't learned lambda, Inheritance.\\n\\nThe review shall be short and clear. No more than 10 lines.\\n\\nABSOLUTE RULES:\\n1) For DUPLICATE CODE: Provide the complete solution including the method signature and implementation\\n2) For OTHER ISSUES: DO NOT provide code, only explain WHAT needs to change\\n3) Keep feedback short, clear, and encouraging.\\n\\nRules:\\n- DO NOT mention or comment on parts of the code that are already correct.\\n- ONLY report real issues that require changes to the code.\\n- If the code is correct, respond that no changes are required.\\n- If you are unsure whether something is incorrect, do NOT mark it as an issue.\"},
+                  {\"role\": \"user\", \"content\": \"Review the following Java file.\\n\\nFOCUS ON:\\n- Duplicate code (HIGHEST PRIORITY)\\n- Magic numbers\\n\\nDUPLICATE CODE RULES:\\n- Duplicate code applies ONLY within a SINGLE class\\n- The same or logically equivalent code appears more than once\\n- The duplicated logic must be extractable into a single method\\n- IMPORTANT: Duplicate code ONLY applies when extracting to a method REDUCES the total number of lines of code\\n- Do NOT consider extract inheritance, Lambda, or interfaces\\n- INVALID SOLUTIONS: Do NOT suggest solutions using lambda expressions, functional interfaces, array indexing patterns, or any features the students haven't learned. Examples of INVALID solutions:\\n  * Using lambda expressions: 'r -> r.getRoomNum() == roomNum'\\n  * Creating custom interfaces: 'interface RoomCondition { boolean test(HotelRoom room); }'\\n  * Passing interfaces as parameters: 'getRoomByCondition(a, b, c, condition)'\\n  * Methods that require array indexing with [i] or iteration patterns\\n  * Any solution that requires defining new interfaces or using functional programming concepts\\n  These solutions are NOT ACCEPTABLE because students haven't learned these concepts yet.\\n- VALID SOLUTIONS: Only suggest extracting duplicate code into simple helper methods that use basic Java features (loops, conditionals, method parameters with primitive types, Strings, or existing classes) AND that result in fewer total lines of code\\n\\nIF DUPLICATE CODE IS FOUND:\\n- Include ❌ Duplicate Code (-10 points)\\n- Name the methods containing the duplicated logic\\n- Provide the COMPLETE solution: method signature AND implementation in a code block\\n- Show exactly how the duplicated logic should be extracted\\n- DO NOT mention code that is already correct\\n- Ensure your solution uses ONLY basic Java features (no lambda, no functional interfaces, no array indexing, no advanced concepts)\\n- Verify that the extraction reduces total code lines\\n\\nMAGIC NUMBERS:\\n- DO NOT penalize magic numbers in the main function\\n- Penalize magic numbers used in constructors, setters, or getters\\n- Magic numbers must be replaced with named static final constants\\n- For magic numbers, only explain WHAT needs to change (no code solution)\\n\\nSCORING (ONLY IF APPLICABLE):\\n- ❌ Duplicate Code (-10 points)\\n- ❌ Magic Numbers (-5 points)\\n\\nNO ISSUES FOUND:\\n- Start with: ✅ Code Quality: Excellent!\\n- Then add a short compliment in Hebrew rooted in Jewish tradition or biblical language (e.g., praise for good work, diligence, or wisdom)\\n\\nIF PENALTIES APPLY:\\n- End with: Recommended adjusted grade: [original grade minus penalties]%\\n\\nWhen in doubt — DO NOT penalize.\\n\\nCode:\\n$ALL_CONTENT_ESCAPED\"}
                 ],
                 \"max_tokens\": 4000,
                 \"store\": true
@@ -274,11 +296,11 @@ jobs:
             AI_REVIEW_UNAVAILABLE_PENALTY=20
           fi
 
-          if grep -q "❌ \*\*Duplicate Code\*\*" .github/badges/review.md; then
+          if grep -q "❌ Duplicate Code" .github/badges/review.md; then
             DUPLICATE_CODE_PENALTY=10
           fi
 
-          if grep -q "❌ \*\*Magic Numbers\*\*" .github/badges/review.md; then
+          if grep -q "❌ Magic Numbers" .github/badges/review.md; then
             MAGIC_NUMBERS_PENALTY=5
           fi
 
@@ -286,34 +308,8 @@ jobs:
 
 
           if [ $TOTAL_PENALTY -gt 0 ]; then
-            ORIGINAL_GRADE="${{ steps.grade.outputs.grade }}"
-            ADJUSTED_GRADE=$((ORIGINAL_GRADE - TOTAL_PENALTY))
-            
-            # Ensure grade doesn't go below 0
-            if [ $ADJUSTED_GRADE -lt 0 ]; then
-              ADJUSTED_GRADE=0
-            fi
-            
-            # Determine color for adjusted grade
-            if [ $ADJUSTED_GRADE -ge 90 ]; then
-              COLOR="brightgreen"
-            elif [ $ADJUSTED_GRADE -ge 70 ]; then
-              COLOR="green"
-            elif [ $ADJUSTED_GRADE -ge 50 ]; then
-              COLOR="yellow"
-            else
-              COLOR="red"
-            fi
-            
-            # Update grade badge with adjusted grade
-            REPO_NAME="${{ github.event.repository.name }}"
-            OWNER="${{ github.repository_owner }}"
-            RUN_ID="${{ github.run_id }}"
-            TEST_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
-            echo "[![Grade](https://img.shields.io/badge/Grade-${ADJUSTED_GRADE}%25-${COLOR})](${TEST_REPORT_URL}) *(Original: ${ORIGINAL_GRADE}%, Penalties: -${TOTAL_PENALTY})*" > .github/badges/grade.md
-            
-            # Set output for adjusted grade
-            echo "adjusted_grade=$ADJUSTED_GRADE" >> $GITHUB_OUTPUT
+            # Update grade badge with total penalty
+            update_grade_badge "${{ steps.grade.outputs.grade }}" "$TOTAL_PENALTY" ""
           else
             # No penalties, adjusted grade equals original grade
             echo "adjusted_grade=${{ steps.grade.outputs.grade }}" >> $GITHUB_OUTPUT

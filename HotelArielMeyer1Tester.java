@@ -276,7 +276,7 @@ public class HotelArielMeyer1Tester {
         Hotel.main(new String[]{});
 
         String output = outContent.toString();
-        assertTrue(output.contains("Hotel Rooms:"));
+        assertTrue(output.contains("Hotel rooms:"));
         assertTrue(output.contains("Hotel Menu:"));
         assertTrue(output.contains("1 - Display rooms by room number (ascending)"));
         assertTrue(output.contains("Enter your choice:"));
@@ -450,6 +450,6 @@ public class HotelArielMeyer1Tester {
 
         String output = outContent.toString();
         assertTrue(output.contains("Error: Invalid menu choice"));
-    }
 
+    }
 }

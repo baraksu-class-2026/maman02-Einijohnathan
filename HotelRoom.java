@@ -34,6 +34,7 @@ public class HotelRoom {
         }
         _occupied = DEF_OCCUPIED;
         _guest = DEF_GUEST;
+
     }
 
     public int getRoomNum() {
@@ -119,5 +120,7 @@ public class HotelRoom {
     public void checkOut() {
         _occupied = false;
         _guest = DEF_GUEST;
+
     }
+
 }
