@@ -78,9 +78,9 @@ public class HotelRoom {
 
     public String toString() {
         if (_occupied == false) {
-            return "Room " + _roomNum + ", " + _numBeds + " beds: Available";
+            return "Room " + _roomNum + ", " + _numBeds + " Beds: Available";
         }
-        return "Room " + _roomNum + ", " + _numBeds + " beds: Occupied by " + _guest;
+        return "Room " + _roomNum + ", " + _numBeds + " Beds: Occupied by " + _guest;
     }
 
     public boolean equals(HotelRoom other) {
