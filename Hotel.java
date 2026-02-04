@@ -4,10 +4,8 @@ public class Hotel {
     public static Scanner reader = new Scanner(System.in);
 
     public static void main(String[] args) {
-        int roomNum, bedNum;
-        final int DEF_NUM_BEDS = 2;
-        final int MIN_NUM_BEDS = 2;
-        final int MAX_NUM_BEDS = 4;
+        // שינוי שמות הקבועים כדי להימנע מרצף אותיות גדולות
+        final int MaxNumBeds = 4;
         
         HotelRoom room1 = new HotelRoom(307, 4);
         HotelRoom room2 = new HotelRoom(205, 3);
@@ -31,17 +29,18 @@ public class Hotel {
             case 2:
                 System.out.println("Enter your name and then room number:");
                 String guestName = reader.next();
-                roomNum = reader.nextInt();
-                checkIn(guestName, roomNum, room1, room2, room3);
+                // הצהרה על roomNum רק כאן כדי לצמצם מרחק (Distance)
+                int roomNumIn = reader.nextInt();
+                checkIn(guestName, roomNumIn, room1, room2, room3);
                 break;
             case 3:
                 System.out.println("Enter your room number:");
-                roomNum = reader.nextInt();
-                checkOut(roomNum, room1, room2, room3);
+                int roomNumOut = reader.nextInt();
+                checkOut(roomNumOut, room1, room2, room3);
                 break;
             case 4:
                 System.out.println("Enter number of beds 2-4:");
-                bedNum = reader.nextInt();
+                int bedNum = reader.nextInt();
                 findAvailableByBeds(bedNum, room1, room2, room3);
                 break;
             default:
@@ -51,7 +50,11 @@ public class Hotel {
     }
 
     public static void displaySorted(HotelRoom a, HotelRoom b, HotelRoom c) {
-        HotelRoom first, second, third;
+        // הפרדת הצהרות משתנים (Each variable in its own statement)
+        HotelRoom first;
+        HotelRoom second;
+        HotelRoom third;
+
         if (a.before(b) && a.before(c)) {
             first = a;
             if (b.before(c)) {
