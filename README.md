@@ -1,10 +1,14 @@
 ## Grade
 
-[![Grade](https://img.shields.io/badge/Grade-69%25-yellow)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21682751900) *(Original: 99%, Penalties: -30)*
+[![Grade](https://img.shields.io/badge/Grade-0%25-red)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21683208584)
+
+## Coding Standards
+
+❌ **Coding Standard Failed (-25 points)** - [View Checkstyle Report](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21683208584)
 
 ## Tests
 
-[📊 View Test Reports](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21682751900)
+[📊 View Test Reports](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21683208584)
 
 ## AI Code Review
 
