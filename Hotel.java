@@ -123,4 +123,9 @@ public class Hotel {
     private static boolean isAvailable(HotelRoom room, int beds) {
         return !room.isOccupied() && room.getNumBeds() == beds;
     }
+    public static void display (HotelRoom a, HotelRoom b, HotelRoom c){
+    System.out.println(a);
+    System.out.println(b);
+    System.out.println(c);
+}
 }
