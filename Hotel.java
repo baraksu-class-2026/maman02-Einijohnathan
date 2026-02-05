@@ -1,9 +1,11 @@
 import java.util.Scanner;
 
 public class Hotel {
-    public static Scanner reader = new Scanner(System.in);
+  
 
     public static void main(String[] args) {
+        
+        Scanner reader = new Scanner(System.in);
         final int MinNumBeds = 2;
         final int MaxNumBeds = 4;
 
@@ -38,7 +40,7 @@ public class Hotel {
                 checkOut(roomNumOut, room1, room2, room3);
                 break;
             case 4:
-                System.out.println("Enter number of beds 2-4");
+                System.out.println("Enter requested number of beds (2-4):");
                 int bedNum = reader.nextInt();
                 findAvailableByBeds(bedNum, room1, room2, room3);
                 break;
