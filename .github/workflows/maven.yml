@@ -1,4 +1,4 @@
-name: CI\CD v101
+name: CI\CD 104
 on:
   push:
     branches: ["main", "testSolution"]
@@ -16,8 +16,8 @@ permissions:
 jobs:
   run-autograding-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 1.5
     if: github.actor != 'github-classroom[bot]' && (github.event_name != 'push' || github.event.pull_request == null)
+    timeout-minutes: 2
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,22 +40,23 @@ jobs:
           java-version: "21"
           distribution: "temurin"
           cache: maven
-      - name: Install Checkstyle
-        run: |
-          curl -L -o checkstyle.jar https://github.com/checkstyle/checkstyle/releases/download/checkstyle-10.20.0/checkstyle-10.20.0-all.jar
-
-      - name: Run Checkstyle
-        run: |
-          java -jar checkstyle.jar \
-            -c .github/google_checks.xml \
-            -f xml \
-            -o checkstyle-result.xml \
-            $(git ls-files '*.java' | grep -v 'Tester\.java$')
-
       - name: Install reviewdog
         uses: reviewdog/action-setup@v1
+      - name: Clean badges
+        run: |
+          echo "" > .github/badges/grade.md
+          echo "" > .github/badges/test_report.md
+          echo "" > .github/badges/review.md
+          echo "" > README.md
+
+      - name: Build with Maven
+        id: build
+        timeout-minutes: 2
+        if: always()
+        run: mvn -B package checkstyle:check --file pom.xml
 
       - name: Report with reviewdog
+        if: always()
         id: reviewdog
         run: |
           reviewdog -name="checkstyle" \
@@ -63,15 +64,12 @@ jobs:
             -filter-mode=nofilter \
             -level=error \
             -fail-level=any \
-            -f=checkstyle < checkstyle-result.xml
+            -f=checkstyle < target/checkstyle-result.xml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_SHA: ${{ steps.get_sha.outputs.sha }}
 
-      - name: Build with Maven
-        if: steps.reviewdog.outcome == 'success'
-        run: mvn -B package --file pom.xml -Dcheckstyle.skip=true
       - name: Calculate Grade
         if: always()
         id: grade
@@ -96,8 +94,13 @@ jobs:
             if [ $TESTS -gt 0 ]; then
               GRADE=$((PASSED * 100 / TESTS))
 
-              if [ "${{ steps.reviewdog.outcome }}" = "failure" ]; then
-                GRADE=$((GRADE - 25))
+              if [ "${{ steps.build.outcome }}" != "success" ]; then
+                GRADE=0
+              fi
+               
+              # Ensure grade doesn't go below 0
+              if [ $GRADE -lt 0 ]; then
+                GRADE=0
               fi
               
             else
@@ -160,45 +163,13 @@ jobs:
       - name: Collect Java files
         if: always()
         run: |
-          find . -name "Hotel*.java" -not -name "*Tester.java" -type f > java_files.txt
+          find . -name "*.java" ! -name "*Tester.java" -type f > java_files.txt
       # Run AI Review with ChatGPT
       - name: AI Review with ChatGPT
-        if: always() && steps.grade.outputs.grade > 0 && steps.reviewdog.outcome == 'success'
+        if: always() && steps.grade.outputs.grade >= 80 && steps.build.outcome == 'success'
         id: ai_review
         run: |
           mkdir -p .github/badges
-
-          # Function to update grade badge with penalty
-          update_grade_badge() {
-            local ORIGINAL_GRADE=$1
-            local PENALTY=$2
-            local PENALTY_MESSAGE=$3
-            
-            ADJUSTED_GRADE=$((ORIGINAL_GRADE - PENALTY))
-            if [ $ADJUSTED_GRADE -lt 0 ]; then
-              ADJUSTED_GRADE=0
-            fi
-            
-            # Determine color for adjusted grade
-            if [ $ADJUSTED_GRADE -ge 90 ]; then
-              COLOR="brightgreen"
-            elif [ $ADJUSTED_GRADE -ge 70 ]; then
-              COLOR="green"
-            elif [ $ADJUSTED_GRADE -ge 50 ]; then
-              COLOR="yellow"
-            else
-              COLOR="red"
-            fi
-            
-            # Update grade badge
-            REPO_NAME="${{ github.event.repository.name }}"
-            OWNER="${{ github.repository_owner }}"
-            RUN_ID="${{ github.run_id }}"
-            TEST_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
-            echo "[![Grade](https://img.shields.io/badge/Grade-${ADJUSTED_GRADE}%25-${COLOR})](${TEST_REPORT_URL}) *(Original: ${ORIGINAL_GRADE}%, Penalties: -${PENALTY})${PENALTY_MESSAGE}*" > .github/badges/grade.md
-            
-            echo "adjusted_grade=$ADJUSTED_GRADE" >> $GITHUB_OUTPUT
-          }
 
           # Build combined content of all Java files
           ALL_CONTENT=""
@@ -225,20 +196,30 @@ jobs:
             echo "$RESPONSE" >> .github/badges/review.md
             
             # Apply penalty for missing AI review
-            update_grade_badge "${{ steps.grade.outputs.grade }}" 20 ""
-            exit 0
-          fi
-
-          # Check if grade is less than 100 - skip AI review API call
-          if [ "${{ steps.grade.outputs.grade }}" -lt 100 ]; then
-            echo "Grade is less than 100, skipping AI review"
-            RESPONSE="❌ **Sending to AI Review Without Perfect Tests** (-30 points): Submitting code for AI review when tests don't pass wastes your teacher's money. Barak doesn't like it. Please ensure all tests pass before requesting AI review."
-            echo "## AI Code Review" > .github/badges/review.md
-            echo "" >> .github/badges/review.md
-            echo "$RESPONSE" >> .github/badges/review.md
+            ORIGINAL_GRADE="${{ steps.grade.outputs.grade }}"
+            ADJUSTED_GRADE=$((ORIGINAL_GRADE - 20))
+            if [ $ADJUSTED_GRADE -lt 0 ]; then
+              ADJUSTED_GRADE=0
+            fi
             
-            # Apply penalty for submitting without perfect tests
-            update_grade_badge "${{ steps.grade.outputs.grade }}" 30 ""
+            # Update grade badge
+            if [ $ADJUSTED_GRADE -ge 90 ]; then
+              COLOR="brightgreen"
+            elif [ $ADJUSTED_GRADE -ge 70 ]; then
+              COLOR="green"
+            elif [ $ADJUSTED_GRADE -ge 50 ]; then
+              COLOR="yellow"
+            else
+              COLOR="red"
+            fi
+            
+            REPO_NAME="${{ github.event.repository.name }}"
+            OWNER="${{ github.repository_owner }}"
+            RUN_ID="${{ github.run_id }}"
+            TEST_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
+            echo "[![Grade](https://img.shields.io/badge/Grade-${ADJUSTED_GRADE}%25-${COLOR})](${TEST_REPORT_URL}) *(Original: ${ORIGINAL_GRADE}%, Penalties: -20)*" > .github/badges/grade.md
+            
+            echo "adjusted_grade=$ADJUSTED_GRADE" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -247,12 +228,12 @@ jobs:
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
               -d "{
-                 \"model\": \"gpt-4o",
+                 \"model\": \"gpt-5-mini\",
                     \"messages\": [
-                  {\"role\": \"system\", \"content\": \"You are a senior Java code reviewer and computer science teacher reviewing student exercises at a high-school level.\\n\\nTHIS IS A LEARNING EXERCISE.\\n\\nReview the student's code and provide clear, constructive feedback.\\n\\nThe students haven't learned lambda, Inheritance.\\n\\nThe review shall be short and clear. No more than 10 lines.\\n\\nABSOLUTE RULES:\\n1) For DUPLICATE CODE: Provide the complete solution including the method signature and implementation\\n2) For OTHER ISSUES: DO NOT provide code, only explain WHAT needs to change\\n3) Keep feedback short, clear, and encouraging.\\n\\nRules:\\n- DO NOT mention or comment on parts of the code that are already correct.\\n- ONLY report real issues that require changes to the code.\\n- If the code is correct, respond that no changes are required.\\n- If you are unsure whether something is incorrect, do NOT mark it as an issue.\"},
-                  {\"role\": \"user\", \"content\": \"Review the following Java file.\\n\\nFOCUS ON:\\n- Duplicate code (HIGHEST PRIORITY)\\n- Magic numbers\\n\\nDUPLICATE CODE RULES:\\n- Duplicate code applies ONLY within a SINGLE class\\n- The same or logically equivalent code appears more than once\\n- The duplicated logic must be extractable into a single method\\n- IMPORTANT: Duplicate code ONLY applies when extracting to a method REDUCES the total number of lines of code\\n- Do NOT consider extract inheritance, Lambda, or interfaces\\n- INVALID SOLUTIONS: Do NOT suggest solutions using lambda expressions, functional interfaces, array indexing patterns, or any features the students haven't learned. Examples of INVALID solutions:\\n  * Using lambda expressions: 'r -> r.getRoomNum() == roomNum'\\n  * Creating custom interfaces: 'interface RoomCondition { boolean test(HotelRoom room); }'\\n  * Passing interfaces as parameters: 'getRoomByCondition(a, b, c, condition)'\\n  * Methods that require array indexing with [i] or iteration patterns\\n  * Any solution that requires defining new interfaces or using functional programming concepts\\n  These solutions are NOT ACCEPTABLE because students haven't learned these concepts yet.\\n- VALID SOLUTIONS: Only suggest extracting duplicate code into simple helper methods that use basic Java features (loops, conditionals, method parameters with primitive types, Strings, or existing classes) AND that result in fewer total lines of code\\n\\nIF DUPLICATE CODE IS FOUND:\\n- Include ❌ Duplicate Code (-10 points)\\n- Name the methods containing the duplicated logic\\n- Provide the COMPLETE solution: method signature AND implementation in a code block\\n- Show exactly how the duplicated logic should be extracted\\n- DO NOT mention code that is already correct\\n- Ensure your solution uses ONLY basic Java features (no lambda, no functional interfaces, no array indexing, no advanced concepts)\\n- Verify that the extraction reduces total code lines\\n\\nMAGIC NUMBERS:\\n- DO NOT penalize magic numbers in the main function\\n- Penalize magic numbers used in constructors, setters, or getters\\n- Magic numbers must be replaced with named static final constants\\n- For magic numbers, only explain WHAT needs to change (no code solution)\\n\\nSCORING (ONLY IF APPLICABLE):\\n- ❌ Duplicate Code (-10 points)\\n- ❌ Magic Numbers (-5 points)\\n\\nNO ISSUES FOUND:\\n- Start with: ✅ Code Quality: Excellent!\\n- Then add a short compliment in Hebrew rooted in Jewish tradition or biblical language (e.g., praise for good work, diligence, or wisdom)\\n\\nIF PENALTIES APPLY:\\n- End with: Recommended adjusted grade: [original grade minus penalties]%\\n\\nWhen in doubt — DO NOT penalize.\\n\\nCode:\\n$ALL_CONTENT_ESCAPED\"}
+                  {\"role\": \"system\", \"content\": \"You are a Java code reviewer acting as a KIND and CONSERVATIVE high-school computer science teacher.\\n\\nTHIS IS A LEARNING EXERCISE.\\nYour job is to help students improve without discouraging them.\\n\\nCRITICAL BEHAVIOR RULES (FOLLOW EXACTLY):\\n- Be conservative: when in doubt, do NOT report an issue.\\n- Do NOT be strict. Do NOT over-optimize. Do NOT show advanced ideas.\\n- Stay strictly within high-school Java level.\\n\\nSTUDENT KNOWLEDGE LIMITS (HARD CONSTRAINT):\\nStudents have NOT learned:\\n- Lambda expressions\\n- Inheritance\\n- Interfaces\\n- Functional programming\\n- Advanced refactoring patterns\\nYou MUST NOT mention or suggest these concepts in any form.\\n\\nREVIEW SCOPE:\\n- ONLY report issues that REQUIRE changes.\\n- NEVER comment on code that is already correct.\\n- If the code is acceptable, explicitly say that no changes are required.\\n\\nOUTPUT LIMITS:\\n- MAXIMUM 10 lines total.\\n- Short sentences. No explanations beyond what is required.\\n- Friendly and encouraging tone.\\n\\nABSOLUTE RULES:\\n1) For DUPLICATE CODE issues: provide the COMPLETE extracted method (signature + body) in a code block.\\n2) For ALL OTHER issues: explain WHAT needs to change. Do NOT provide code.\\n3) If unsure, do NOT flag the issue.\"},
+                  {\"role\": \"user\", \"content\": \"Review the following Java file.\\n\\nFOCUS (IN THIS ORDER ONLY):\\n1) Duplicate code\\n2) Magic numbers\\n\\nDUPLICATE CODE — STRICT DEFINITION:\\n- Applies ONLY within a SINGLE class.\\n- The SAME or LOGICALLY EQUIVALENT logic appears more than once.\\n- The logic can be extracted into ONE simple helper method.\\n- Extraction MUST REDUCE the total number of lines.\\n- If extraction does NOT reduce lines, it is NOT duplicate code.\\n\\nALLOWED SOLUTIONS FOR DUPLICATE CODE:\\n- Simple helper methods only\\n- Use basic Java: loops, conditionals, primitive types, Strings, existing classes\\n\\nFORBIDDEN SOLUTIONS (NEVER SUGGEST):\\n- Lambda expressions\\n- Interfaces or functional interfaces\\n- Inheritance\\n- Passing behavior as parameters\\n- Advanced iteration or abstraction patterns\\n\\nIF DUPLICATE CODE IS FOUND:\\n- Include ❌ Duplicate Code (-10 points)\\n- Name the methods with duplication\\n- Provide the COMPLETE extracted helper method in a code block\\n- Do NOT include any other code\\n- Do NOT mention correct code\\n\\nMAGIC NUMBERS:\\n- Do NOT penalize magic numbers inside main\\n- Penalize magic numbers ONLY in constructors, getters, or setters\\n- Magic numbers must be replaced with named static final constants\\n- For magic numbers: explain WHAT should change. NO code.\\n\\nSCORING (ONLY IF APPLICABLE):\\n- ❌ Duplicate Code (-10 points)\\n- ❌ Magic Numbers (-5 points)\\n\\nNO ISSUES FOUND:\\n- Start with: ✅ Code Quality: Excellent!\\n- Add ONE short compliment in Hebrew inspired by Jewish tradition or biblical wisdom\\n\\nIF PENALTIES APPLY:\\n- End with: Recommended adjusted grade: [original grade minus penalties]%\\n\\nDEFAULT BEHAVIOR:\\nIf unsure about an issue, say the code requires no changes.\\n\\nCode:\\n$ALL_CONTENT_ESCAPED\"}
                 ],
-                \"max_tokens\": 4000,
+                \"max_completion_tokens\": 4000,
                 \"store\": true
               }")
 
@@ -308,8 +289,34 @@ jobs:
 
 
           if [ $TOTAL_PENALTY -gt 0 ]; then
-            # Update grade badge with total penalty
-            update_grade_badge "${{ steps.grade.outputs.grade }}" "$TOTAL_PENALTY" ""
+            ORIGINAL_GRADE="${{ steps.grade.outputs.grade }}"
+            ADJUSTED_GRADE=$((ORIGINAL_GRADE - TOTAL_PENALTY))
+            
+            # Ensure grade doesn't go below 0
+            if [ $ADJUSTED_GRADE -lt 0 ]; then
+              ADJUSTED_GRADE=0
+            fi
+            
+            # Determine color for adjusted grade
+            if [ $ADJUSTED_GRADE -ge 90 ]; then
+              COLOR="brightgreen"
+            elif [ $ADJUSTED_GRADE -ge 70 ]; then
+              COLOR="green"
+            elif [ $ADJUSTED_GRADE -ge 50 ]; then
+              COLOR="yellow"
+            else
+              COLOR="red"
+            fi
+            
+            # Update grade badge with adjusted grade
+            REPO_NAME="${{ github.event.repository.name }}"
+            OWNER="${{ github.repository_owner }}"
+            RUN_ID="${{ github.run_id }}"
+            TEST_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
+            echo "[![Grade](https://img.shields.io/badge/Grade-${ADJUSTED_GRADE}%25-${COLOR})](${TEST_REPORT_URL}) *(Original: ${ORIGINAL_GRADE}%, Penalties: -${TOTAL_PENALTY})*" > .github/badges/grade.md
+            
+            # Set output for adjusted grade
+            echo "adjusted_grade=$ADJUSTED_GRADE" >> $GITHUB_OUTPUT
           else
             # No penalties, adjusted grade equals original grade
             echo "adjusted_grade=${{ steps.grade.outputs.grade }}" >> $GITHUB_OUTPUT
@@ -337,13 +344,7 @@ jobs:
           # Read the badge files content
           GRADE_CONTENT=$(cat .github/badges/grade.md)
           TEST_REPORT_CONTENT=$(cat .github/badges/test_report.md)
-
-          # Check if review.md exists, if not create a default message
-          if [ -f .github/badges/review.md ]; then
-            REVIEW_CONTENT=$(cat .github/badges/review.md)
-          else
-            REVIEW_CONTENT=$'## AI Code Review\n\n❌ **AI Hasn\'t Reviewed Your Work**\n\nYour submission was not sent for AI review because the basic requirements were not met.'
-          fi
+          REVIEW_CONTENT=$(cat .github/badges/review.md)
 
           # Create README with injected content
           cat > README.md << 'EOFMARKER'
@@ -353,25 +354,18 @@ jobs:
           echo "$GRADE_CONTENT" >> README.md
 
           # Add Checkstyle status if it failed
-          if [ "${{ steps.reviewdog.outcome }}" = "failure" ]; then
+          if [ "${{ steps.build.outcome }}" != "success" ]; then
             REPO_NAME="${{ github.event.repository.name }}"
             OWNER="${{ github.repository_owner }}"
             RUN_ID="${{ github.run_id }}"
             CHECKSTYLE_REPORT_URL="https://github.com/${OWNER}/${REPO_NAME}/actions/runs/${RUN_ID}"
             cat >> README.md << 'EOFMARKER2'
 
-          ## Coding Standards
+          ## Build with Maven
 
           EOFMARKER2
-            echo "❌ **Coding Standard Failed (-25 points)** - [View Checkstyle Report](${CHECKSTYLE_REPORT_URL})" >> README.md
+            echo "❌ **Build Failed** - [View Action](${CHECKSTYLE_REPORT_URL})" >> README.md
           fi
-
-          cat >> README.md << 'EOFMARKER'
-
-          ## Tests
-
-          EOFMARKER
-          echo "$TEST_REPORT_CONTENT" >> README.md
 
           cat >> README.md << 'EOFMARKER'
 
@@ -388,12 +382,8 @@ jobs:
           # Pull latest changes BEFORE staging to avoid conflicts
           git pull --rebase origin ${{ github.ref_name }} || echo "Already up to date"
 
-          # Stage all changed files (only if they exist)
-          for file in README.md .github/badges/grade.md .github/badges/test_report.md .github/badges/review.md; do
-            if [ -f "$file" ]; then
-              git add "$file"
-            fi
-          done
+          # Stage all changed files
+          git add README.md .github/badges/grade.md .github/badges/test_report.md .github/badges/review.md
 
           # Commit all changes
           git commit -m "Update README and badges [skip ci]" || echo "No changes to commit"
