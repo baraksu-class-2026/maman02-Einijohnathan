@@ -54,17 +54,13 @@ public class HotelRoom {
     }
 
     public void setRoomNum(int roomNum) {
-        if (roomNum < MIN_NUM_ROOM || roomNum > MAX_NUM_ROOM) {
-            _roomNum = DEF_NUM_ROOM;
-        } else {
-            _roomNum = roomNum;
+        if (roomNum >= MIN_NUM_ROOM && roomNum <= MAX_NUM_ROOM) {
+        _roomNum = roomNum;
         }
     }
 
     public void setNumBeds(int numBeds) {
-        if (numBeds < MIN_NUM_BEDS || numBeds > MAX_NUM_BEDS) {
-            _numBeds = DEF_NUM_BEDS;
-        } else {
+        if (numBeds >= MIN_NUM_BEDS && numBeds <= MAX_NUM_BEDS) {
             _numBeds = numBeds;
         }
     }
