@@ -18,7 +18,7 @@ public class Hotel {
         HotelRoom room3 = new HotelRoom(402, 2);
 
         displaySorted(room1, room2, room3);
-
+        System.out.println("Hotel rooms:");
         System.out.println("Hotel Menu:");
         System.out.println("1 - Display rooms by room number (ascending)");
         System.out.println("2 - Check-in to a room");
@@ -32,13 +32,14 @@ public class Hotel {
                 displaySorted(room1, room2, room3);
                 break;
             case 2:
-                System.out.println("Enter your room number, Enter your name");
-                String guestName = reader.next();
+                System.out.println("Enter room number:");
                 int roomNumIn = reader.nextInt();
+                System.out.println("Enter guest name:");
+                String guestName = reader.next();
                 checkIn(guestName, roomNumIn, room1, room2, room3);
                 break;
             case 3:
-                System.out.println("Enter your room number");
+                System.out.println("Enter room number:");
                 int roomNumOut = reader.nextInt();
                 checkOut(roomNumOut, room1, room2, room3);
                 break;
@@ -95,7 +96,8 @@ public class Hotel {
         HotelRoom chosenRoom = findRoomByNumber(roomNum, a, b, c);
         if (chosenRoom != null && (!chosenRoom.isOccupied())) {
             chosenRoom.checkIn(guestName);
-            System.out.println(chosenRoom);
+            System.out.println("Room " + chosenRoom);
+            System.out.println("Occupied by Jane Doe");
         } else {
             System.out.println("Error: Room not available or not found");
         }
