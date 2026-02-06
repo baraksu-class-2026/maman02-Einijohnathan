@@ -21,16 +21,17 @@ public class HotelRoom {
     }
 
     public HotelRoom(int roomNum, int numBeds) {
+    
         if (roomNum < MIN_NUM_ROOM || roomNum > MAX_NUM_ROOM) {
             _roomNum = DEF_NUM_ROOM;
         } else {
             _roomNum = roomNum;
         }
         
-        if (numBeds < MIN_NUM_BEDS || numBeds > MAX_NUM_BEDS) {
-            _numBeds = DEF_NUM_BEDS;
-        } else {
+        if (numBedsOk(numBeds)) {
             _numBeds = numBeds;
+        } else {
+            _numBeds = DEF_NUM_BEDS;
         }
         _occupied = DEF_OCCUPIED;
         _guest = DEF_GUEST;
@@ -65,8 +66,8 @@ public class HotelRoom {
         }
     }
 
-    private boolean roomNumOk(int roomNum) {
-        return (roomNum >= MIN_NUM_ROOM && roomNum <= MAX_NUM_ROOM);
+    private boolean numBedsOk(int numBeds) {
+    return (numBeds >= MIN_NUM_BEDS && numBeds <= MAX_NUM_BEDS);
     }
 
     public String toString() {
