@@ -1,9 +1,12 @@
 ## AI Code Review
 
 ❌ Duplicate Code (-10 points)
-Duplicate in methods: checkIn and checkOut
-```java
-private static void printRoomNotAvailable() { System.out.println("Error: Room not available or not found"); }
+Methods with duplication: checkIn and checkOut
 ```
-Nice work — a small helper will make this cleaner.
+private static HotelRoom getRoomOrPrintNotAvailable(int roomNum, HotelRoom a, HotelRoom b, HotelRoom c) {
+    HotelRoom chosenRoom = findRoomByNumber(roomNum, a, b, c);
+    if (chosenRoom == null) printRoomNotAvailable();
+    return chosenRoom;
+}
+```
 Recommended adjusted grade: 90%
