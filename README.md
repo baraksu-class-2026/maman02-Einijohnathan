@@ -1,8 +1,9 @@
 ## Grade
 
-[![Grade](https://img.shields.io/badge/Grade-100%25-brightgreen)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21747480776)
+[![Grade](https://img.shields.io/badge/Grade-0%25-red)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21747558477)
 
-## AI Code Review
+## Build with Maven
 
-✅ Code Quality: Excellent!
-חזק ואמיץ — כל הכבוד על העבודה הטובה.
+❌ **Build Failed** - [View Action](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21747558477)
+
+
