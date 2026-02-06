@@ -2,15 +2,9 @@ import java.util.Scanner;
 
 public class Hotel {
 
-   
-  
-
     public static void main(String[] args) {
-        
-        Scanner reader = new Scanner(System.in);
-
-        final int MinNumBeds = 2;
-        final int MaxNumBeds = 4;
+        final int minNumBeds = 2;
+        final int maxNumBeds = 4;
 
         HotelRoom room1 = new HotelRoom(307, 4);
         HotelRoom room2 = new HotelRoom(205, 3);
@@ -18,6 +12,10 @@ public class Hotel {
         HotelRoom room3 = new HotelRoom(402, 2);
 
         displaySorted(room1, room2, room3);
+
+        // תיקון: הצהרת ה-Scanner צמוד לשימוש הראשון כדי לצמצם מרחק
+        Scanner reader = new Scanner(System.in);
+
         System.out.println("Hotel rooms:");
         System.out.println("Hotel Menu:");
         System.out.println("1 - Display rooms by room number (ascending)");
@@ -44,9 +42,7 @@ public class Hotel {
                 checkOut(roomNumOut, room1, room2, room3);
                 break;
             case 4:
-
                 System.out.println("Enter requested number of beds (2-4):");
-
                 int bedNum = reader.nextInt();
                 findAvailableByBeds(bedNum, room1, room2, room3);
                 break;
@@ -57,9 +53,9 @@ public class Hotel {
     }
 
     public static void displaySorted(HotelRoom a, HotelRoom b, HotelRoom c) {
-        HotelRoom first = new HotelRoom();
-        HotelRoom second = new HotelRoom();
-        HotelRoom third = new HotelRoom();
+        HotelRoom first;
+        HotelRoom second;
+        HotelRoom third;
 
         if (a.before(b) && a.before(c)) {
             first = a;
@@ -97,7 +93,7 @@ public class Hotel {
         if (chosenRoom != null && (!chosenRoom.isOccupied())) {
             chosenRoom.checkIn(guestName);
             System.out.println("Room " + chosenRoom);
-            System.out.println("Occupied by Jane Doe");
+            System.out.println("Occupied by " + guestName);
         } else {
             printRoomNotAvailable();
         }
@@ -123,7 +119,6 @@ public class Hotel {
         } else {
             printRoomNotAvailable();
         }
-
     }
 
     public static void findAvailableByBeds(int beds, HotelRoom a, HotelRoom b, HotelRoom c) {
@@ -147,6 +142,8 @@ public class Hotel {
         System.out.println(b);
         System.out.println(c);
     }
+
+    // תיקון: הוספת שורת רווח ריקה לפני המתודה (METHOD_DEF)
     private static void printRoomNotAvailable() { 
         System.out.println("Error: Room not available or not found");
     }
