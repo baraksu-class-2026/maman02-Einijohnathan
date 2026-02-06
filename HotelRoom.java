@@ -69,10 +69,6 @@ public class HotelRoom {
         return (roomNum >= MIN_NUM_ROOM && roomNum <= MAX_NUM_ROOM);
     }
 
-    private boolean numBedsOk(int numbed) {
-        return (numbed >= MIN_NUM_BEDS && numbed <= MAX_NUM_BEDS);
-    }
-
     public String toString() {
         if (_occupied == false) {
             return "Room " + _roomNum + ", " + _numBeds + " Beds: Available";
