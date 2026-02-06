@@ -1,9 +1,9 @@
 ## Grade
 
-[![Grade](https://img.shields.io/badge/Grade-0%25-red)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21747558477)
+[![Grade](https://img.shields.io/badge/Grade-0%25-red)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21747714134)
 
 ## Build with Maven
 
-❌ **Build Failed** - [View Action](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21747558477)
+❌ **Build Failed** - [View Action](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21747714134)
 
 
