@@ -1,16 +1,13 @@
 ## Grade
 
-[![Grade](https://img.shields.io/badge/Grade-90%25-brightgreen)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21748319028) *(Original: 100%, Penalties: -10)*
+[![Grade](https://img.shields.io/badge/Grade-90%25-brightgreen)](https://github.com/baraksu-class-2026/maman02-Einijohnathan/actions/runs/21748597348) *(Original: 100%, Penalties: -10)*
 
 ## AI Code Review
 
 ❌ Duplicate Code (-10 points)
-Methods with duplication: HotelRoom(int, int) and setRoomNum; HotelRoom(int, int) and setNumBeds.
-Extracted helper method to add:
+Duplicate in methods: checkIn and checkOut
 ```java
-private boolean numBedsOk(int numBeds) {
-    return (numBeds >= MIN_NUM_BEDS && numBeds <= MAX_NUM_BEDS);
-}
+private static void printRoomNotAvailable() { System.out.println("Error: Room not available or not found"); }
 ```
-Also reuse the existing roomNumOk(...) in the constructor and in setRoomNum.
+Nice work — a small helper will make this cleaner.
 Recommended adjusted grade: 90%

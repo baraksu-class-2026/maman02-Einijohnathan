@@ -1,12 +1,9 @@
 ## AI Code Review
 
 ❌ Duplicate Code (-10 points)
-Methods with duplication: HotelRoom(int, int) and setRoomNum; HotelRoom(int, int) and setNumBeds.
-Extracted helper method to add:
+Duplicate in methods: checkIn and checkOut
 ```java
-private boolean numBedsOk(int numBeds) {
-    return (numBeds >= MIN_NUM_BEDS && numBeds <= MAX_NUM_BEDS);
-}
+private static void printRoomNotAvailable() { System.out.println("Error: Room not available or not found"); }
 ```
-Also reuse the existing roomNumOk(...) in the constructor and in setRoomNum.
+Nice work — a small helper will make this cleaner.
 Recommended adjusted grade: 90%
