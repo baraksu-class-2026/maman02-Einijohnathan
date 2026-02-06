@@ -99,7 +99,7 @@ public class Hotel {
             System.out.println("Room " + chosenRoom);
             System.out.println("Occupied by Jane Doe");
         } else {
-            System.out.println("Error: Room not available or not found");
+            printRoomNotAvailable();
         }
     }
 
@@ -121,7 +121,7 @@ public class Hotel {
             chosenRoom.checkOut();
             System.out.println(chosenRoom);
         } else {
-            System.out.println("Error: Room not available or not found");
+            printRoomNotAvailable();
         }
 
     }
@@ -146,5 +146,8 @@ public class Hotel {
         System.out.println(a);
         System.out.println(b);
         System.out.println(c);
+    }
+    private static void printRoomNotAvailable() { 
+        System.out.println("Error: Room not available or not found");
     }
 }
