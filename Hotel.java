@@ -1,13 +1,11 @@
+
 import java.util.Scanner;
 
 public class Hotel {
 
-   
-  
-
     public static void main(String[] args) {
-        
-        Scanner reader = new Scanner(System.in);
+
+        final Scanner reader = new Scanner(System.in);
 
         final int MinNumBeds = 2;
         final int MaxNumBeds = 4;
